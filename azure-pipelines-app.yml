@@ -15,13 +15,70 @@ variables:
     value: event-driven-azure
   - name: runtimeSecretName
     value: event-driven-azure-runtime
+  - name: securityScanSeverity
+    value: HIGH,CRITICAL
+  - name: approvalNotifyUsers
+    value: ""
 
 stages:
+
+# =========================
+# PRE-BUILD SECURITY SCANNING
+# =========================
+- stage: PreBuildSecurityScan
+  jobs:
+    - job: ScanSourceAndManifests
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+        - checkout: self
+
+        - script: |
+            set -eu
+            sudo apt-get update
+            sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+            wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+            echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
+            sudo apt-get update
+            sudo apt-get install -y trivy
+          displayName: Install Trivy
+
+        - script: |
+            set -eu
+            trivy config --severity "$(securityScanSeverity)" --exit-code 1 services/order-service/Dockerfile
+            trivy config --severity "$(securityScanSeverity)" --exit-code 1 services/inventory-service/Dockerfile
+            trivy config --severity "$(securityScanSeverity)" --exit-code 1 helm/order-service
+          displayName: Scan Dockerfiles And Kubernetes Manifests
+
+        - script: |
+            set -eu
+            trivy fs \
+              --scanners vuln,secret \
+              --skip-dirs services/order-service/node_modules \
+              --skip-dirs services/inventory-service/node_modules \
+              --severity "$(securityScanSeverity)" \
+              --exit-code 1 \
+              .
+          displayName: Scan Source Code Dependencies And Secrets
+
+        - script: |
+            set -eu
+            if [ -f services/inventory-service/package-lock.json ]; then
+              npm audit --prefix services/inventory-service --omit=dev --audit-level=high
+            fi
+
+            if [ -f services/order-service/package-lock.json ]; then
+              npm audit --prefix services/order-service --omit=dev --audit-level=high
+            else
+              echo "Skipping npm audit for order-service because package-lock.json is not present."
+            fi
+          displayName: Run NPM Dependency Audit
 
 # =========================
 # BUILD & PUSH IMAGE
 # =========================
 - stage: Build
+  dependsOn: PreBuildSecurityScan
   jobs:
     - job: BuildPush
       pool:
@@ -58,10 +115,70 @@ stages:
           displayName: Lint Helm Chart
 
 # =========================
+# IMAGE SECURITY SCANNING
+# =========================
+- stage: ImageSecurityScan
+  dependsOn: Build
+  jobs:
+    - job: ScanContainerImages
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+        - checkout: self
+
+        - script: |
+            set -eu
+            sudo apt-get update
+            sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+            wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+            echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
+            sudo apt-get update
+            sudo apt-get install -y trivy
+          displayName: Install Trivy
+
+        - task: AzureCLI@2
+          displayName: Scan Published Container Images
+          inputs:
+            azureSubscription: IAC-Conn
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              set -eu
+              az acr login --name "$(acrName)"
+
+              trivy image \
+                --severity "$(securityScanSeverity)" \
+                --exit-code 1 \
+                "$(acrName).azurecr.io/$(orderImageName):$(Build.BuildId)"
+
+              trivy image \
+                --severity "$(securityScanSeverity)" \
+                --exit-code 1 \
+                "$(acrName).azurecr.io/$(inventoryImageName):$(Build.BuildId)"
+
+# =========================
+# MANUAL APPROVAL
+# =========================
+- stage: ManualApproval
+  dependsOn: ImageSecurityScan
+  jobs:
+    - job: AwaitApproval
+      displayName: Await Manual Approval
+      pool: server
+      timeoutInMinutes: 1440
+      steps:
+        - task: ManualValidation@0
+          timeoutInMinutes: 1440
+          inputs:
+            notifyUsers: $(approvalNotifyUsers)
+            instructions: Review security scan results, image tags, runtime configuration, and AKS change window before approving deployment.
+            onTimeout: reject
+
+# =========================
 # DEPLOY TO AKS
 # =========================
 - stage: Deploy
-  dependsOn: Build
+  dependsOn: ManualApproval
   jobs:
     - deployment: DeployToAKS
       environment: dev

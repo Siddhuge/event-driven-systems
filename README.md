@@ -75,8 +75,17 @@ The pipeline expects an Azure DevOps variable group named `event-driven-azure-de
 | `azureResourceGroup` | `rg-aks-dev` | Resource group containing the AKS cluster. |
 | `aksClusterName` | `aks-event-driven-dev` | AKS cluster name. |
 | `kafkaBroker` | `kafka.event-driven.svc.cluster.local:29092` | Kubernetes DNS name and port reachable from pods. |
+| `approvalNotifyUsers` | `platform-team@example.com` | Users or groups notified for manual approval. |
 
 If Kafka is deployed in the same namespace as the app, `kafka:29092` is enough. If it is in another namespace, use `<service>.<namespace>.svc.cluster.local:<port>`.
+
+The pipeline enforces these release gates before deployment:
+
+- Pre-build Trivy config scan for Dockerfiles and Helm/Kubernetes manifests
+- Pre-build Trivy source scan for dependency vulnerabilities and secrets
+- NPM dependency audit for services with lockfiles
+- Post-build Trivy image scan against the images pushed to ACR
+- Manual approval before the Helm deployment stage
 
 Create the runtime secret in the target namespace before deploying. In production, source these values from Azure Key Vault or your secret-management workflow.
 
