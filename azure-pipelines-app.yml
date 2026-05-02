@@ -5,6 +5,8 @@ trigger:
 
 variables:
   - group: event-driven-azure-dev
+  - name: azureServiceConnection
+    value: IAC-Conn
   - name: orderImageName
     value: order-service
   - name: inventoryImageName
@@ -15,6 +17,8 @@ variables:
     value: event-driven-azure
   - name: runtimeSecretName
     value: event-driven-azure-runtime
+  - name: keyVaultSecretsFilter
+    value: rabbitmq-url,redis-url
   - name: securityScanSeverity
     value: HIGH,CRITICAL
   - name: approvalNotifyUsers
@@ -139,7 +143,7 @@ stages:
         - task: AzureCLI@2
           displayName: Scan Published Container Images
           inputs:
-            azureSubscription: IAC-Conn
+            azureSubscription: $(azureServiceConnection)
             scriptType: bash
             scriptLocation: inlineScript
             inlineScript: |
@@ -194,7 +198,7 @@ stages:
               - script: |
                   set -eu
 
-                  for name in ACR_NAME AZURE_RESOURCE_GROUP AKS_CLUSTER_NAME KAFKA_BROKER RUNTIME_SECRET_NAME; do
+                  for name in ACR_NAME AZURE_RESOURCE_GROUP AKS_CLUSTER_NAME KAFKA_BROKER KEY_VAULT_NAME RUNTIME_SECRET_NAME; do
                     eval "value=\${$name:-}"
                     if [ -z "$value" ]; then
                       echo "Required deployment variable $name is missing."
@@ -207,13 +211,69 @@ stages:
                   AZURE_RESOURCE_GROUP: $(azureResourceGroup)
                   AKS_CLUSTER_NAME: $(aksClusterName)
                   KAFKA_BROKER: $(kafkaBroker)
+                  KEY_VAULT_NAME: $(keyVaultName)
                   RUNTIME_SECRET_NAME: $(runtimeSecretName)
+
+              - task: AzureKeyVault@2
+                displayName: Fetch Runtime Secrets From Azure Key Vault
+                inputs:
+                  azureSubscription: $(azureServiceConnection)
+                  KeyVaultName: $(keyVaultName)
+                  SecretsFilter: $(keyVaultSecretsFilter)
+                  RunAsPreJob: false
+
+              - script: |
+                  set -eu
+
+                  for name in RABBITMQ_URL REDIS_URL; do
+                    eval "value=\${$name:-}"
+                    if [ -z "$value" ]; then
+                      echo "Required Key Vault secret for $name is missing."
+                      exit 1
+                    fi
+                  done
+                displayName: Validate Key Vault Secrets
+                env:
+                  RABBITMQ_URL: $(rabbitmq-url)
+                  REDIS_URL: $(redis-url)
+
+              - task: AzureCLI@2
+                displayName: Create Or Update AKS Runtime Secret
+                inputs:
+                  azureSubscription: $(azureServiceConnection)
+                  scriptType: bash
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    set -eu
+
+                    az aks get-credentials \
+                      --resource-group "$AZURE_RESOURCE_GROUP" \
+                      --name "$AKS_CLUSTER_NAME" \
+                      --overwrite-existing
+
+                    kubectl create namespace "$KUBERNETES_NAMESPACE" \
+                      --dry-run=client \
+                      -o yaml | kubectl apply -f -
+
+                    kubectl create secret generic "$RUNTIME_SECRET_NAME" \
+                      --namespace "$KUBERNETES_NAMESPACE" \
+                      --from-literal=RABBITMQ_URL="$RABBITMQ_URL" \
+                      --from-literal=REDIS_URL="$REDIS_URL" \
+                      --dry-run=client \
+                      -o yaml | kubectl apply -f -
+                env:
+                  AZURE_RESOURCE_GROUP: $(azureResourceGroup)
+                  AKS_CLUSTER_NAME: $(aksClusterName)
+                  KUBERNETES_NAMESPACE: $(kubernetesNamespace)
+                  RUNTIME_SECRET_NAME: $(runtimeSecretName)
+                  RABBITMQ_URL: $(rabbitmq-url)
+                  REDIS_URL: $(redis-url)
 
               - task: HelmDeploy@0
                 displayName: Helm Upgrade
                 inputs:
                   connectionType: Azure Resource Manager
-                  azureSubscriptionEndpoint: IAC-Conn
+                  azureSubscriptionEndpoint: $(azureServiceConnection)
                   azureResourceGroup: $(azureResourceGroup)
                   kubernetesCluster: $(aksClusterName)
                   namespace: $(kubernetesNamespace)

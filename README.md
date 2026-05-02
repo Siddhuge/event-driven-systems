@@ -74,10 +74,18 @@ The pipeline expects an Azure DevOps variable group named `event-driven-azure-de
 | `acrName` | `mycompanyacr` | ACR name only, without `.azurecr.io`. |
 | `azureResourceGroup` | `rg-aks-dev` | Resource group containing the AKS cluster. |
 | `aksClusterName` | `aks-event-driven-dev` | AKS cluster name. |
+| `keyVaultName` | `kv-event-driven-dev` | Azure Key Vault used by the pipeline for runtime secrets. |
 | `kafkaBroker` | `kafka.event-driven.svc.cluster.local:29092` | Kubernetes DNS name and port reachable from pods. |
 | `approvalNotifyUsers` | `platform-team@example.com` | Users or groups notified for manual approval. |
 
 If Kafka is deployed in the same namespace as the app, `kafka:29092` is enough. If it is in another namespace, use `<service>.<namespace>.svc.cluster.local:<port>`.
+
+Store runtime secrets in Azure Key Vault with these names:
+
+| Key Vault secret | Kubernetes key | Example |
+| --- | --- | --- |
+| `rabbitmq-url` | `RABBITMQ_URL` | `amqp://rabbitmq.event-driven.svc.cluster.local:5672` |
+| `redis-url` | `REDIS_URL` | `redis://redis.event-driven.svc.cluster.local:6379` |
 
 The pipeline enforces these release gates before deployment:
 
@@ -85,9 +93,17 @@ The pipeline enforces these release gates before deployment:
 - Pre-build Trivy source scan for dependency vulnerabilities and secrets
 - NPM dependency audit for services with lockfiles
 - Post-build Trivy image scan against the images pushed to ACR
+- Azure Key Vault secret retrieval at deploy time
+- Kubernetes runtime secret creation or update in AKS
 - Manual approval before the Helm deployment stage
 
-Create the runtime secret in the target namespace before deploying. In production, source these values from Azure Key Vault or your secret-management workflow.
+The Azure DevOps service connection must have:
+
+- permission to read secrets from the Key Vault
+- permission to access the AKS cluster and apply manifests in the target namespace
+- permission to pull images from ACR through AKS identity or image pull configuration
+
+For a one-off local deployment, create the runtime secret manually:
 
 ```bash
 kubectl create namespace event-driven
