@@ -1,0 +1,68 @@
+{{- if .Values.orderService.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "event-driven-azure.fullname" . }}-order
+  labels:
+    {{- include "event-driven-azure.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "event-driven-azure.fullname" . }}-order
+  minReplicas: {{ .Values.orderService.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.orderService.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.orderService.autoscaling.targetCPUUtilizationPercentage }}
+---
+{{- end }}
+{{- if .Values.inventoryService.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "event-driven-azure.fullname" . }}-inventory
+  labels:
+    {{- include "event-driven-azure.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "event-driven-azure.fullname" . }}-inventory
+  minReplicas: {{ .Values.inventoryService.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.inventoryService.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.inventoryService.autoscaling.targetCPUUtilizationPercentage }}
+---
+{{- end }}
+{{- if .Values.retryWorker.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "event-driven-azure.fullname" . }}-retry-worker
+  labels:
+    {{- include "event-driven-azure.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "event-driven-azure.fullname" . }}-retry-worker
+  minReplicas: {{ .Values.retryWorker.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.retryWorker.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.retryWorker.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}

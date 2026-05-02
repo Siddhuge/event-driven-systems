@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "event-driven-azure.fullname" . }}-config
+  labels:
+    {{- include "event-driven-azure.labels" . | nindent 4 }}
+data:
+  KAFKA_BROKER: {{ .Values.config.kafkaBroker | quote }}
+  CLIENT_ID: {{ .Values.config.orderClientId | quote }}

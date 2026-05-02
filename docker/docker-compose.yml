@@ -1,26 +1,50 @@
-version: '3.8'
-
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_4LW_COMMANDS_WHITELIST: ruok
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   rabbitmq:
     image: rabbitmq:3-management
     ports:
       - "5672:5672"
       - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     ports:
       - "9092:9092"
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -37,22 +61,72 @@ services:
       - kafka_data:/var/lib/kafka/data
 
     healthcheck:
-      test: ["CMD", "bash", "-c", "nc -z localhost 9092"]
+      test: ["CMD", "bash", "-c", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      "kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic orders --partitions 3 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic orders_retry --partitions 3 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic orders_dlq --partitions 3 --replication-factor 1"
+
+  order-service:
+    build:
+      context: ../services/order-service
+    image: event-driven-azure/order-service:local
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      CLIENT_ID: order-service
+      KAFKA_BROKER: kafka:29092
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  inventory-service:
+    build:
+      context: ../services/inventory-service
+    image: event-driven-azure/inventory-service:local
+    environment:
+      KAFKA_BROKER: kafka:29092
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  retry-worker:
+    image: event-driven-azure/inventory-service:local
+    command: ["node", "src/rabbitmq/retryConsumer.js"]
+    environment:
+      KAFKA_BROKER: kafka:29092
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      inventory-service:
+        condition: service_started
+    restart: unless-stopped
 
 volumes:
   kafka_data:
   zookeeper_data:
-
-
-
-# To run this docker-compose file, use the following command in the terminal:
-# docker compose up -d
-# This will start the Zookeeper, RabbitMQ, and Kafka services in detached mode. You can access the RabbitMQ management interface at http://localhost:15672 with the default username and password (guest/guest).
-
-# Fro cleaning up the services, you can use:
-
-# docker compose down -v
-# docker system prune -f
+  rabbitmq_data:
+  redis_data:

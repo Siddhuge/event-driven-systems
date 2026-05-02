@@ -2,9 +2,11 @@
 const kafka = require("../config/kafka");
 
 const producer = kafka.producer();
+let connected = false;
 
 const connectProducer = async () => {
   await producer.connect();
+  connected = true;
   console.log("Kafka Producer Connected");
 };
 
@@ -15,4 +17,6 @@ const sendEvent = async (topic, message) => {
   });
 };
 
-module.exports = { connectProducer, sendEvent };
+const isProducerConnected = () => connected;
+
+module.exports = { connectProducer, sendEvent, isProducerConnected };

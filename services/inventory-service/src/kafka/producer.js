@@ -1,9 +1,4 @@
-const { Kafka } = require("kafkajs");
-
-const kafka = new Kafka({
-  clientId: "inventory-service",
-  brokers: ["localhost:9092"]
-});
+const kafka = require("./kafka");
 
 const producer = kafka.producer();
 

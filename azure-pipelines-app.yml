@@ -1,0 +1,117 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  - group: event-driven-azure-dev
+  - name: orderImageName
+    value: order-service
+  - name: inventoryImageName
+    value: inventory-service
+  - name: kubernetesNamespace
+    value: event-driven
+  - name: releaseName
+    value: event-driven-azure
+  - name: runtimeSecretName
+    value: event-driven-azure-runtime
+
+stages:
+
+# =========================
+# BUILD & PUSH IMAGE
+# =========================
+- stage: Build
+  jobs:
+    - job: BuildPush
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+        - checkout: self
+
+        - task: Docker@2
+          displayName: Build & Push Order Service Image
+          inputs:
+            containerRegistry: ACR-Connection
+            repository: $(orderImageName)
+            command: buildAndPush
+            Dockerfile: services/order-service/Dockerfile
+            buildContext: services/order-service
+            tags: |
+              $(Build.BuildId)
+
+        - task: Docker@2
+          displayName: Build & Push Inventory Service Image
+          inputs:
+            containerRegistry: ACR-Connection
+            repository: $(inventoryImageName)
+            command: buildAndPush
+            Dockerfile: services/inventory-service/Dockerfile
+            buildContext: services/inventory-service
+            tags: |
+              $(Build.BuildId)
+
+        - task: HelmInstaller@1
+          displayName: Install Helm
+
+        - script: helm lint helm/order-service
+          displayName: Lint Helm Chart
+
+# =========================
+# DEPLOY TO AKS
+# =========================
+- stage: Deploy
+  dependsOn: Build
+  jobs:
+    - deployment: DeployToAKS
+      environment: dev
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - checkout: self
+
+              - task: HelmInstaller@1
+                displayName: Install Helm
+
+              - script: |
+                  set -eu
+
+                  for name in ACR_NAME AZURE_RESOURCE_GROUP AKS_CLUSTER_NAME KAFKA_BROKER RUNTIME_SECRET_NAME; do
+                    eval "value=\${$name:-}"
+                    if [ -z "$value" ]; then
+                      echo "Required deployment variable $name is missing."
+                      exit 1
+                    fi
+                  done
+                displayName: Validate Deployment Variables
+                env:
+                  ACR_NAME: $(acrName)
+                  AZURE_RESOURCE_GROUP: $(azureResourceGroup)
+                  AKS_CLUSTER_NAME: $(aksClusterName)
+                  KAFKA_BROKER: $(kafkaBroker)
+                  RUNTIME_SECRET_NAME: $(runtimeSecretName)
+
+              - task: HelmDeploy@0
+                displayName: Helm Upgrade
+                inputs:
+                  connectionType: Azure Resource Manager
+                  azureSubscriptionEndpoint: IAC-Conn
+                  azureResourceGroup: $(azureResourceGroup)
+                  kubernetesCluster: $(aksClusterName)
+                  namespace: $(kubernetesNamespace)
+                  command: upgrade
+                  chartType: FilePath
+                  chartPath: helm/order-service
+                  releaseName: $(releaseName)
+                  install: true
+                  waitForExecution: true
+                  arguments: >
+                    --atomic
+                    --timeout 10m
+                    --create-namespace
+                    --set-string global.imageRegistry=$(acrName).azurecr.io
+                    --set-string global.imageTag=$(Build.BuildId)
+                    --set-string config.kafkaBroker=$(kafkaBroker)
+                    --set secrets.create=false
+                    --set-string secrets.existingSecret=$(runtimeSecretName)

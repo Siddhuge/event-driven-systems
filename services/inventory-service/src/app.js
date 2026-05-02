@@ -1,9 +1,5 @@
-// src/app.js
-require("dotenv").config();
 const runConsumer = require("./consumers/orderConsumer");
 
-const start = async () => {
+module.exports = async () => {
   await runConsumer();
 };
-
-start();

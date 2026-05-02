@@ -1,0 +1,44 @@
+{{- if .Values.orderService.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "event-driven-azure.fullname" . }}-order
+  labels:
+    {{- include "event-driven-azure.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.orderService.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: order-service
+---
+{{- end }}
+{{- if .Values.inventoryService.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "event-driven-azure.fullname" . }}-inventory
+  labels:
+    {{- include "event-driven-azure.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.inventoryService.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: inventory-service
+---
+{{- end }}
+{{- if .Values.retryWorker.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "event-driven-azure.fullname" . }}-retry-worker
+  labels:
+    {{- include "event-driven-azure.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.retryWorker.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: retry-worker
+{{- end }}
