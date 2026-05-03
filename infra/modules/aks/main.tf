@@ -37,7 +37,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
     service_cidr      = "10.2.0.0/16"
     dns_service_ip    = "10.2.0.10"
     load_balancer_sku = "standard"
-    outbound_type     = "userDefinedRouting"
+    # prod: route egress through Azure Firewall/NVA via UDR; dev/staging: use managed load balancer
+    outbound_type     = var.environment == "prod" ? "userDefinedRouting" : "loadBalancer"
   }
 
   dynamic "api_server_access_profile" {
@@ -54,8 +55,9 @@ resource "azurerm_kubernetes_cluster" "aks" {
   # Azure Policy for compliance
   azure_policy_enabled = true
 
-  # Enable OIDC issuer (required for Workload Identity)
-  oidc_issuer_enabled = true
+  # Enable OIDC issuer + Workload Identity (required for pod-level Azure auth without secrets)
+  oidc_issuer_enabled       = true
+  workload_identity_enabled = true
 
   # OMS agent for monitoring (optional, requires log_analytics_workspace_id)
   # Uncomment and set log_analytics_workspace_id to enable

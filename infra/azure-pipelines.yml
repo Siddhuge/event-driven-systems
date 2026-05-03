@@ -96,7 +96,7 @@ stages:
               inlineScript: |
                 set -e
 
-                TF_DIR="$(System.DefaultWorkingDirectory)/envs/dev"
+                TF_DIR="$(System.DefaultWorkingDirectory)/infra/envs/dev"
 
                 echo "📁 Terraform Directory: $TF_DIR"
                 echo "🔐 Configuring Terraform authentication..."
@@ -130,7 +130,7 @@ stages:
                 terraform -chdir="$TF_DIR" plan -out=tfplan
                 echo "📋 Plan saved to tfplan"
 
-          - publish: envs/dev/tfplan
+          - publish: infra/envs/dev/tfplan
             artifact: dev-plan
             displayName: 📦 Publish DEV Plan
 
@@ -162,7 +162,7 @@ stages:
                     inlineScript: |
                       set -e
 
-                      TF_DIR="$(System.DefaultWorkingDirectory)/envs/dev"
+                      TF_DIR="$(System.DefaultWorkingDirectory)/infra/envs/dev"
 
                       echo "🔐 Configuring Terraform authentication..."
                       export ARM_CLIENT_ID="${servicePrincipalId}"
@@ -179,11 +179,39 @@ stages:
                       echo "✅ DEV infrastructure deployed successfully"
 
   # =========================================
+  # PROD APPROVAL GATE
+  # =========================================
+  - stage: Prod_Approval
+    displayName: 🔐 Approve PROD Deployment
+    dependsOn: Dev_Apply
+    condition: succeeded()
+    jobs:
+      - job: AwaitApproval
+        displayName: Manual approval before PROD
+        pool: server
+        timeoutInMinutes: "1440"
+        steps:
+          - task: ManualValidation@0
+            timeoutInMinutes: 1440
+            inputs:
+              notifyUsers: ""
+              instructions: |
+                DEV infrastructure has been applied successfully.
+
+                Before proceeding to PROD, confirm:
+                1. DEV smoke tests passed
+                2. No outstanding security findings
+                3. PROD terraform.tfvars is correct and reviewed
+                4. On-call is aware of the production change
+                5. Rollback plan is documented
+              onTimeout: reject
+
+  # =========================================
   # PROD ENVIRONMENT
   # =========================================
   - stage: Prod_Plan
     displayName: 📋 PROD Plan
-    dependsOn: Dev_Apply
+    dependsOn: Prod_Approval
     condition: succeeded()
     jobs:
       - job: Plan
@@ -208,7 +236,7 @@ stages:
               inlineScript: |
                 set -e
 
-                TF_DIR="$(System.DefaultWorkingDirectory)/envs/prod"
+                TF_DIR="$(System.DefaultWorkingDirectory)/infra/envs/prod"
 
                 echo "📁 Terraform Directory: $TF_DIR"
                 echo "🔐 Configuring Terraform authentication..."
@@ -264,7 +292,7 @@ stages:
                 terraform -chdir="$TF_DIR" plan -out=tfplan
                 echo "📋 Plan saved to tfplan"
 
-          - publish: envs/prod/tfplan
+          - publish: infra/envs/prod/tfplan
             artifact: prod-plan
             displayName: 📦 Publish PROD Plan
 
@@ -296,7 +324,7 @@ stages:
                     inlineScript: |
                       set -e
 
-                      TF_DIR="$(System.DefaultWorkingDirectory)/envs/prod"
+                      TF_DIR="$(System.DefaultWorkingDirectory)/infra/envs/prod"
 
                       echo "🔐 Configuring Terraform authentication..."
                       export ARM_CLIENT_ID="${servicePrincipalId}"

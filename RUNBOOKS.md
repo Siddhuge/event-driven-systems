@@ -96,9 +96,9 @@ HELM_VALUES="${2:-values-dev.yaml}"
 
 echo "🚀 Rolling update with tag: $IMAGE_TAG using $HELM_VALUES"
 
-helm upgrade event-driven-azure ./helm/order-service \
+helm upgrade event-driven-azure ./app/helm/order-service \
   --namespace event-driven \
-  --values helm/order-service/$HELM_VALUES \
+  --values app/helm/order-service/$HELM_VALUES \
   --set-string global.imageTag=$IMAGE_TAG \
   --wait \
   --timeout 10m
@@ -192,12 +192,12 @@ kubectl patch hpa event-driven-azure-order -n event-driven -p \
 kubectl top pods -n event-driven --containers
 
 # Update resource requests/limits in values
-vim helm/order-service/values.yaml
+vim app/helm/order-service/values.yaml
 
 # Apply changes
-helm upgrade event-driven-azure ./helm/order-service \
+helm upgrade event-driven-azure ./app/helm/order-service \
   --namespace event-driven \
-  --values helm/order-service/values-dev.yaml
+  --values app/helm/order-service/values-dev.yaml
 ```
 
 ## Incident Response
@@ -355,9 +355,9 @@ kubectl get pvc -n event-driven -o yaml > backup-pvc.yaml
 3. **Redeploy application**:
    ```bash
    kubectl create namespace event-driven
-   helm install event-driven-azure ./helm/order-service \
+   helm install event-driven-azure ./app/helm/order-service \
      --namespace event-driven \
-     --values helm/order-service/values-dev.yaml
+     --values app/helm/order-service/values-dev.yaml
    ```
 
 **Scenario: Data loss in stateful service**
@@ -401,7 +401,7 @@ kubectl auth can-i get pods --as=system:serviceaccount:event-driven:default
 kubectl get deployment <name> -n event-driven -o yaml > deployment.yaml
 
 # Apply kustomization
-kubectl apply -k helm/order-service
+kubectl apply -k app/helm/order-service
 
 # Dry-run deployment
 kubectl apply -f deployment.yaml --dry-run=client
@@ -410,6 +410,6 @@ kubectl apply -f deployment.yaml --dry-run=client
 ---
 
 For additional help, see:
-- [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) - Initial setup
-- [SECURITY_CHECKLIST.md](./infra/SECURITY_CHECKLIST.md) - Security procedures
-- [infra/docs/DEPLOYMENT.md](./infra/docs/DEPLOYMENT.md) - Infrastructure details
+- [README.md](./README.md) - Architecture overview and Quick Start
+- [SECURITY_OPERATIONS.md](./SECURITY_OPERATIONS.md) - Security procedures and incident response
+- [infra/KEYVAULT_INTEGRATION.md](./infra/KEYVAULT_INTEGRATION.md) - Key Vault pipeline integration

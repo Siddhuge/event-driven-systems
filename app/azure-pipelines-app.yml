@@ -51,7 +51,7 @@ stages:
 
         - script: |
             set -eu
-            cd services/order-service
+            cd app/services/order-service
             npm ci
             npm run test:ci
           displayName: Test Order Service
@@ -60,7 +60,7 @@ stages:
 
         - script: |
             set -eu
-            cd services/inventory-service
+            cd app/services/inventory-service
             npm ci
             npm run test:ci
           displayName: Test Inventory Service
@@ -98,17 +98,17 @@ stages:
 
         - script: |
             set -eu
-            trivy config --severity "$(securityScanSeverity)" --exit-code 1 services/order-service/Dockerfile
-            trivy config --severity "$(securityScanSeverity)" --exit-code 1 services/inventory-service/Dockerfile
-            trivy config --severity "$(securityScanSeverity)" --exit-code 1 helm/order-service
+            trivy config --severity "$(securityScanSeverity)" --exit-code 1 app/services/order-service/Dockerfile
+            trivy config --severity "$(securityScanSeverity)" --exit-code 1 app/services/inventory-service/Dockerfile
+            trivy config --severity "$(securityScanSeverity)" --exit-code 1 app/helm/order-service
           displayName: Scan Dockerfiles And Kubernetes Manifests
 
         - script: |
             set -eu
             trivy fs \
               --scanners vuln,secret \
-              --skip-dirs services/order-service/node_modules \
-              --skip-dirs services/inventory-service/node_modules \
+              --skip-dirs app/services/order-service/node_modules \
+              --skip-dirs app/services/inventory-service/node_modules \
               --severity "$(securityScanSeverity)" \
               --exit-code 1 \
               .
@@ -116,12 +116,12 @@ stages:
 
         - script: |
             set -eu
-            if [ -f services/inventory-service/package-lock.json ]; then
-              npm audit --prefix services/inventory-service --omit=dev --audit-level=high
+            if [ -f app/services/inventory-service/package-lock.json ]; then
+              npm audit --prefix app/services/inventory-service --omit=dev --audit-level=high
             fi
 
-            if [ -f services/order-service/package-lock.json ]; then
-              npm audit --prefix services/order-service --omit=dev --audit-level=high
+            if [ -f app/services/order-service/package-lock.json ]; then
+              npm audit --prefix app/services/order-service --omit=dev --audit-level=high
             else
               echo "Skipping npm audit for order-service: package-lock.json not present."
             fi
@@ -160,8 +160,8 @@ stages:
             containerRegistry: ACR-Connection
             repository: $(orderImageName)
             command: buildAndPush
-            Dockerfile: services/order-service/Dockerfile
-            buildContext: services/order-service
+            Dockerfile: app/services/order-service/Dockerfile
+            buildContext: app/services/order-service
             tags: |
               $(ImageTag)
               $(LatestTag)
@@ -172,8 +172,8 @@ stages:
             containerRegistry: ACR-Connection
             repository: $(inventoryImageName)
             command: buildAndPush
-            Dockerfile: services/inventory-service/Dockerfile
-            buildContext: services/inventory-service
+            Dockerfile: app/services/inventory-service/Dockerfile
+            buildContext: app/services/inventory-service
             tags: |
               $(ImageTag)
               $(LatestTag)
@@ -181,7 +181,7 @@ stages:
         - task: HelmInstaller@1
           displayName: Install Helm
 
-        - script: helm lint helm/order-service --strict
+        - script: helm lint app/helm/order-service --strict
           displayName: Lint Helm Chart
 
 # =========================
@@ -384,7 +384,7 @@ stages:
                   namespace: $(kubernetesNamespace)
                   command: upgrade
                   chartType: FilePath
-                  chartPath: helm/order-service
+                  chartPath: app/helm/order-service
                   releaseName: $(releaseName)
                   install: true
                   waitForExecution: true
@@ -392,7 +392,7 @@ stages:
                     --atomic
                     --timeout 10m
                     --create-namespace
-                    --values helm/order-service/values-dev.yaml
+                    --values app/helm/order-service/values-dev.yaml
                     --set-string global.imageRegistry=$(acrName).azurecr.io
                     --set-string global.imageTag=$(ImageTag)
                     --set-string config.kafkaBroker=$(kafkaBroker)
