@@ -75,6 +75,12 @@ variable "aks_private_cluster_public_fqdn_enabled" {
   default     = false
 }
 
+variable "aks_admin_group_object_ids" {
+  type        = list(string)
+  description = "Azure AD group object IDs granted cluster admin access"
+  default     = ["bc40bcb6-2e7e-42d2-9608-832ed4692f92"]
+}
+
 variable "key_vault_public_network_access_enabled" {
   type        = bool
   description = "Whether public network access is enabled for prod Key Vault"

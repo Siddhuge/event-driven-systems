@@ -77,6 +77,7 @@ module "aks" {
   authorized_ip_ranges                = var.aks_authorized_ips
   private_cluster_enabled             = var.aks_private_cluster_enabled
   private_cluster_public_fqdn_enabled = var.aks_private_cluster_public_fqdn_enabled
+  admin_group_object_ids              = var.aks_admin_group_object_ids
   log_analytics_workspace_id          = module.log_analytics.workspace_id
 
   depends_on = [module.network]

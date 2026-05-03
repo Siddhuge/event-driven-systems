@@ -1,3 +1,5 @@
+data "azurerm_client_config" "current" {}
+
 resource "azurerm_kubernetes_cluster" "aks" {
   # checkov:skip=CKV_AZURE_117:Disk Encryption Set requires a separate CMK key-vault/key resource outside this module scope
   # checkov:skip=CKV_AZURE_226:Standard_DS2_v2 (dev node size) has only 14 GB temp storage, which is insufficient for ephemeral OS disks
@@ -41,7 +43,9 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   # CKV_AZURE_141 prerequisite: Azure AD RBAC must be enabled when local accounts are disabled
   azure_active_directory_role_based_access_control {
-    azure_rbac_enabled = true
+    tenant_id              = data.azurerm_client_config.current.tenant_id
+    admin_group_object_ids = var.admin_group_object_ids
+    azure_rbac_enabled     = true
   }
 
   # Identity and Access

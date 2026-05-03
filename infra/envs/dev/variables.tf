@@ -75,6 +75,12 @@ variable "aks_private_cluster_public_fqdn_enabled" {
   default     = true
 }
 
+variable "aks_admin_group_object_ids" {
+  type        = list(string)
+  description = "Azure AD group object IDs granted cluster admin access"
+  default     = ["bc40bcb6-2e7e-42d2-9608-832ed4692f92"]
+}
+
 variable "jumpbox_enabled" {
   type        = bool
   description = "Whether to create a dev jumpbox in the AKS VNet"

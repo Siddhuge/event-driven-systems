@@ -74,6 +74,17 @@ variable "log_analytics_workspace_id" {
   default     = ""
 }
 
+variable "admin_group_object_ids" {
+  type        = list(string)
+  description = "Azure AD group object IDs granted cluster admin access via Azure RBAC"
+  default     = []
+
+  validation {
+    condition     = alltrue([for id in var.admin_group_object_ids : can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", id))])
+    error_message = "Each entry must be a valid UUID (lowercase)."
+  }
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags to apply to AKS cluster"
