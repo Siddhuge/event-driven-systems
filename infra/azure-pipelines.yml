@@ -14,7 +14,7 @@ variables:
   azureServiceConnection: IAC-Conn
   terraformVersion: 1.5.7
   # Environment-specific variables
-  jumpboxEnabledDev: 'true'
+  jumpboxEnabledDev: 'false'
   jumpboxEnabledProd: 'false'
   keyVaultNameDev: 'event-driven-dev-kv'
   jumpboxSshPublicKeyDev: ''
@@ -40,14 +40,23 @@ stages:
               set -e
               pip install checkov==3.2.526
 
-              echo "🔍 Running Checkov scan..."
-              checkov -d . \
+              echo "🔍 Running Checkov scan (CRITICAL + HIGH only)..."
+              checkov -d infra \
                 --framework terraform \
-                --quiet \
                 --compact \
                 --output cli \
-                --soft-fail
+                --output sarif \
+                --output-file-path console,checkov-results.sarif \
+                --soft-fail-on MEDIUM,LOW,INFO
             displayName: Run Checkov Scan
+
+          - task: PublishPipelineArtifact@1
+            condition: always()
+            inputs:
+              targetPath: checkov-results.sarif
+              artifact: checkov-sarif
+              publishLocation: pipeline
+            displayName: Publish Checkov SARIF
 
   # =========================================
   # DEV ENVIRONMENT
@@ -107,11 +116,25 @@ stages:
                 export ARM_USE_OIDC=true
                 export ARM_OIDC_TOKEN="${idToken}"
 
-                cat > "$TF_DIR/pipeline.auto.tfvars" <<EOF
-                jumpbox_enabled = $(jumpboxEnabledDev)
-                EOF
+                JUMPBOX_ENABLED="$(jumpboxEnabledDev)"
+                SSH_KEY="$(jumpboxSshPublicKeyDev)"
+                ALLOWED_CIDR="$(jumpboxAllowedSshCidrDev)"
 
-                echo "✅ Generated pipeline.auto.tfvars (SSH key and KV secrets sourced from terraform.tfvars)"
+                if [ "$JUMPBOX_ENABLED" = "true" ]; then
+                  if [ -z "$SSH_KEY" ] || [ -z "$ALLOWED_CIDR" ]; then
+                    echo "❌ jumpboxEnabledDev=true requires jumpboxSshPublicKeyDev and jumpboxAllowedSshCidrDev in the variable group"
+                    exit 1
+                  fi
+                  {
+                    echo "jumpbox_enabled              = true"
+                    echo "jumpbox_admin_ssh_public_key = \"$SSH_KEY\""
+                    echo "jumpbox_allowed_ssh_cidrs    = [\"$ALLOWED_CIDR\"]"
+                  } > "$TF_DIR/pipeline.auto.tfvars"
+                  echo "✅ Generated pipeline.auto.tfvars with jumpbox enabled"
+                else
+                  echo "jumpbox_enabled = false" > "$TF_DIR/pipeline.auto.tfvars"
+                  echo "✅ Generated pipeline.auto.tfvars (jumpbox disabled)"
+                fi
 
                 terraform -chdir="$TF_DIR" init -input=false
 

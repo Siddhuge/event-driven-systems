@@ -52,6 +52,18 @@ module "kv" {
   secrets                       = var.key_vault_secrets
 }
 
+module "log_analytics" {
+  source            = "../../modules/log-analytics"
+  name              = "${local.naming_prefix}-law"
+  rg_name           = module.rg.name
+  location          = var.location
+  retention_in_days = var.log_analytics_retention_days
+  daily_quota_gb    = var.log_analytics_daily_quota_gb
+  tags              = local.common_tags
+
+  depends_on = [module.rg]
+}
+
 module "aks" {
   source                              = "../../modules/aks"
   name                                = "${local.naming_prefix}-aks"
@@ -65,6 +77,7 @@ module "aks" {
   authorized_ip_ranges                = var.aks_authorized_ips
   private_cluster_enabled             = var.aks_private_cluster_enabled
   private_cluster_public_fqdn_enabled = var.aks_private_cluster_public_fqdn_enabled
+  log_analytics_workspace_id          = module.log_analytics.workspace_id
 
   depends_on = [module.network]
 }

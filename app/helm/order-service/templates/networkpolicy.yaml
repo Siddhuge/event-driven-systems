@@ -13,11 +13,48 @@ spec:
     - Ingress
     - Egress
   ingress:
+    # Allow traffic only from the ingress-nginx controller namespace
     - from:
-        - namespaceSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: {{ .Values.orderService.service.port }}
+    # Allow intra-release traffic (e.g. retry-worker → order-service)
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
       ports:
         - protocol: TCP
           port: {{ .Values.orderService.service.port }}
   egress:
-    - {}
+    # DNS resolution
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Kafka
+    - ports:
+        - protocol: TCP
+          port: 9092
+        - protocol: TCP
+          port: 29092
+    # RabbitMQ
+    - ports:
+        - protocol: TCP
+          port: 5672
+    # Redis
+    - ports:
+        - protocol: TCP
+          port: 6379
+    # OTEL collector
+    - ports:
+        - protocol: TCP
+          port: 4318
 {{- end }}

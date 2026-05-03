@@ -37,13 +37,16 @@ config:
   orderClientId: order-service
   logLevel: info
 
-# Secret management: use Azure Key Vault CSI driver in production
+# Secret management: NEVER set real values here.
+# Local dev: pass via --set secrets.rabbitmqUrl=... or docker-compose env
+# AKS: set secrets.create=false and secrets.existingSecret=<secret-name>
+#       (the pipeline creates the secret from Key Vault at deploy time)
 secrets:
-  create: true
-  rabbitmqUrl: amqp://rabbitmq:5672
-  redisUrl: redis://redis:6379
-  jwtSecret: "change-me-use-keyvault-in-production"
-  existingSecret: ""
+  create: false
+  rabbitmqUrl: ""
+  redisUrl: ""
+  jwtSecret: ""
+  existingSecret: "event-driven-azure-runtime"
 
 # Azure Key Vault CSI driver integration (production recommended)
 # Enable this when deploying to AKS with Key Vault CSI driver installed

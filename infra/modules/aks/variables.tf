@@ -68,6 +68,12 @@ variable "authorized_ip_ranges" {
   }
 }
 
+variable "log_analytics_workspace_id" {
+  type        = string
+  description = "Log Analytics workspace resource ID for OMS agent / Container Insights. Leave empty to skip."
+  default     = ""
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags to apply to AKS cluster"

@@ -27,10 +27,7 @@ const safeJsonParse = (value) => {
 
 // Exported separately so tests can mock it
 const processOrder = async (event) => {
-  if (Math.random() < 0.5) {
-    throw new Error('Random processing failure');
-  }
-  logger.info({ orderId: event.orderId }, 'Inventory reserved');
+  logger.info({ orderId: event.orderId, itemCount: event.items?.length ?? 0 }, 'Inventory reserved');
 };
 
 // Core handler — exported for unit testing

@@ -6,10 +6,16 @@ const createOrder = async (req, res) => {
   const { items, customerId } = req.validatedBody;
   const timer = orderCreationDuration.startTimer();
 
+  const resolvedCustomerId = customerId || req.user?.sub;
+  if (!resolvedCustomerId) {
+    timer({ status: 'rejected' });
+    return res.status(401).json({ error: 'Authenticated user or customerId required' });
+  }
+
   try {
     const order = {
       orderId: uuidv4(),
-      customerId: customerId || req.user?.sub || 'anonymous',
+      customerId: resolvedCustomerId,
       items,
       status: 'CREATED',
       createdAt: new Date().toISOString()

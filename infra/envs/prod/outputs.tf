@@ -52,6 +52,16 @@ output "vnet_id" {
   description = "Virtual Network ID"
 }
 
+output "log_analytics_workspace_id" {
+  value       = module.log_analytics.workspace_id
+  description = "Resource ID of the Log Analytics workspace"
+}
+
+output "log_analytics_workspace_name" {
+  value       = module.log_analytics.name
+  description = "Name of the Log Analytics workspace"
+}
+
 output "environment" {
   value       = var.environment
   description = "Deployment environment"

@@ -59,11 +59,12 @@ resource "azurerm_kubernetes_cluster" "aks" {
   oidc_issuer_enabled       = true
   workload_identity_enabled = true
 
-  # OMS agent for monitoring (optional, requires log_analytics_workspace_id)
-  # Uncomment and set log_analytics_workspace_id to enable
-  # oms_agent {
-  #   log_analytics_workspace_id = var.log_analytics_workspace_id
-  # }
+  dynamic "oms_agent" {
+    for_each = var.log_analytics_workspace_id != "" ? [1] : []
+    content {
+      log_analytics_workspace_id = var.log_analytics_workspace_id
+    }
+  }
 
   # Cluster tagging
   tags = var.tags

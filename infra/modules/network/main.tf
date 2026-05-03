@@ -35,7 +35,8 @@ resource "azurerm_network_security_group" "aks_nsg" {
   tags                = var.tags
 }
 
-# Allow ingress on required ports
+# Allow HTTPS inbound from within the VNet only.
+# External HTTPS reaches pods via the Azure Load Balancer service, not directly through this NSG.
 resource "azurerm_network_security_rule" "allow_https" {
   name                        = "AllowHTTPS"
   priority                    = 100
@@ -44,6 +45,36 @@ resource "azurerm_network_security_rule" "allow_https" {
   protocol                    = "Tcp"
   source_port_range           = "*"
   destination_port_range      = "443"
+  source_address_prefix       = "VirtualNetwork"
+  destination_address_prefix  = "VirtualNetwork"
+  resource_group_name         = var.rg_name
+  network_security_group_name = azurerm_network_security_group.aks_nsg.name
+}
+
+# Allow Azure Load Balancer health probes (required for AKS LB)
+resource "azurerm_network_security_rule" "allow_lb_probes" {
+  name                        = "AllowAzureLoadBalancer"
+  priority                    = 110
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "*"
+  source_port_range           = "*"
+  destination_port_range      = "*"
+  source_address_prefix       = "AzureLoadBalancer"
+  destination_address_prefix  = "*"
+  resource_group_name         = var.rg_name
+  network_security_group_name = azurerm_network_security_group.aks_nsg.name
+}
+
+# Deny all other inbound traffic explicitly
+resource "azurerm_network_security_rule" "deny_all_inbound" {
+  name                        = "DenyAllInbound"
+  priority                    = 4000
+  direction                   = "Inbound"
+  access                      = "Deny"
+  protocol                    = "*"
+  source_port_range           = "*"
+  destination_port_range      = "*"
   source_address_prefix       = "*"
   destination_address_prefix  = "*"
   resource_group_name         = var.rg_name
@@ -61,7 +92,7 @@ resource "azurerm_route_table" "aks" {
   name                          = "${var.name}-aks-rt"
   location                      = var.location
   resource_group_name           = var.rg_name
-  disable_bgp_route_propagation = false
+  bgp_route_propagation_enabled = true
   tags                          = var.tags
 }
 

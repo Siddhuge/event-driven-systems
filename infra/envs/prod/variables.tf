@@ -103,6 +103,23 @@ variable "key_vault_network_acls_bypass" {
   }
 }
 
+variable "log_analytics_retention_days" {
+  type        = number
+  description = "Number of days to retain logs in the prod Log Analytics workspace"
+  default     = 90
+
+  validation {
+    condition     = var.log_analytics_retention_days >= 30 && var.log_analytics_retention_days <= 730
+    error_message = "Retention must be between 30 and 730 days."
+  }
+}
+
+variable "log_analytics_daily_quota_gb" {
+  type        = number
+  description = "Daily ingestion cap in GB for the prod workspace. Use -1 for unlimited."
+  default     = -1
+}
+
 variable "key_vault_secrets" {
   type = map(object({
     value           = string
