@@ -1,0 +1,30 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "event-driven-azure.fullname" . }}-role
+  labels:
+    {{- include "event-driven-azure.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames:
+      - {{ include "event-driven-azure.secretName" . }}
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "event-driven-azure.fullname" . }}-binding
+  labels:
+    {{- include "event-driven-azure.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "event-driven-azure.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  apiGroup: rbac.authorization.k8s.io
+  name: {{ include "event-driven-azure.fullname" . }}-role

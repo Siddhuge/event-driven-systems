@@ -1,0 +1,37 @@
+#cloud-config
+package_update: true
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+
+runcmd:
+  - curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg
+  - chmod go+r /etc/apt/keyrings/microsoft.gpg
+  - AZ_REPO=$(lsb_release -cs) && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" > /etc/apt/sources.list.d/azure-cli.list
+  - apt-get update
+  - apt-get install -y azure-cli
+  - az aks install-cli
+  - |
+    # Setup AKS credentials for azureuser
+    mkdir -p /home/azureuser/.kube
+    echo "Authenticating with Azure using managed identity..."
+    az login --identity --allow-no-subscriptions >/dev/null 2>&1
+    echo "Getting AKS cluster credentials..."
+    az aks get-credentials \
+      --resource-group "${resource_group_name}" \
+      --name "${aks_cluster_name}" \
+      --file /home/azureuser/.kube/config \
+      --overwrite-existing \
+      --admin
+    chown azureuser:azureuser /home/azureuser/.kube/config
+    chmod 600 /home/azureuser/.kube/config
+  - |
+    # Verify kubectl works
+    export KUBECONFIG=/home/azureuser/.kube/config
+    kubectl cluster-info >/dev/null 2>&1 && echo "✓ AKS cluster connection successful" || echo "⚠ AKS configuration may need attention"
+  - |
+    # Set kubeconfig environment variable in user profile
+    echo 'export KUBECONFIG=/home/azureuser/.kube/config' >> /home/azureuser/.bashrc

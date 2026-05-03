@@ -1,5 +1,126 @@
+# Git
+.git/
+.gitignore-local
+
+# Node.js
 node_modules/
-.env
 npm-debug.log
+yarn-error.log
+package-lock.json.bak
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Terraform - LOCAL values containing secrets
+# ⚠️ IMPORTANT: terraform.tfvars should be in gitignore
+# Use terraform.tfvars.example as template, never commit tfvars
+infra/envs/*/terraform.tfvars
+infra/envs/*/.terraform/
+infra/envs/*/tfplan
+infra/envs/*/.terraform.lock.hcl
+infra/envs/*/*.auto.tfvars
+infra/envs/*/crash.log
+
+# Local development
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
+Thumbs.db
+
+# Helm
+helm/*/charts/
+helm/*/.helmignore
+
+# Kubernetes
+kubeconfig
+kubeconfig.local
+kubeconfig-*.yaml
+auth_token
+
+# Azure
+.azure/
+azure-credentials.json
+subscription-*
+az-*.json
+az-credentials-*.json
+
+# Container
+docker-compose.override.yml
+Dockerfile.local
+
+# CI/CD
+.github/workflows/secrets.yml
+.gitlab-ci.local.yml
+
+# Credentials and secrets - NEVER COMMIT
+**/secrets/**
+**/*secret*
+**/*token*
+**/*password*
+**/*credentials*
+**/*apikey*
+**/*api_key*
+**/*private*
+**/*key.pem*
+**/*key.p8*
+**/*key.pub*
+**/*cert.pem*
+**/*ca.pem*
+.ssh/
+
+# Backup and temporary files
+*.bak
+*.backup
+*.tmp
+*.swp
+*~
+*.log
+*.orig
+
+# IDE
+.vscode/settings.json
+.idea/
+*.iml
+.project
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+.directory
+.TemporaryItems
+.VolumeIcon.icns
+.Spotlight-V100
+Thumbs.db
+
+# Local testing
+test-results/
+coverage/
+*.lcov
+
+# Documentation build artifacts
+docs/_build/
+docs/.build/
+
+# Local binaries
+bin/
+dist/
+
+# Codex
 .codex
+
+# Debugging
+debug-*.yaml
+debug-logs/
+*.prof
+*.pprof
+
+# Build artifacts
+build/
+out/
+target/

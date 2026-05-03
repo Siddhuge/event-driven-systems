@@ -1,0 +1,175 @@
+# Production — full HA, Key Vault CSI, Workload Identity, OTel enabled
+# ⚠️ SECURITY: Use Key Vault CSI + Workload Identity instead of K8s secrets
+
+config:
+  logLevel: warn  # Reduced verbosity in production
+
+# Azure Key Vault CSI driver (RECOMMENDED for production)
+# Requires: Azure Key Vault CSI Driver for Kubernetes installed on AKS
+keyVault:
+  enabled: true
+  name: event-driven-prod-kv  # Set via pipeline variable
+  tenantId: ""  # Set via pipeline variable
+  clientId: ""  # Workload Identity client ID - set via pipeline
+  secretsVersion: v1
+  secretsMap:
+    rabbitmq-url: RABBITMQ_URL
+    redis-url: REDIS_URL
+    jwt-secret: JWT_SECRET
+
+# Azure Workload Identity (RECOMMENDED over service principal secrets)
+# Provides secure, zero-secret authentication using Entra tokens
+workloadIdentity:
+  enabled: true
+  clientId: ""  # Set via pipeline - Azure Entra App ID
+  tenantId: ""  # Set via pipeline 
+
+serviceAccount:
+  annotations:
+    azure.workload.identity/client-id: ""  # Set via pipeline
+
+# OpenTelemetry tracing for observability
+otel:
+  enabled: "true"
+  endpoint: "http://otel-collector.monitoring:4318/v1/traces"
+  samplingRate: "0.1"  # Sample 10% of traces to reduce overhead
+
+# Ingress with TLS
+ingress:
+  enabled: true
+  host: "orders.example.com"
+  certIssuer: letsencrypt-prod
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+
+# Network policies enforce zero-trust networking
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+# Production replicas and HPA configuration
+orderService:
+  replicaCount: 3
+  image:
+    pullPolicy: IfNotPresent
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  resources:
+    requests:
+      cpu: 300m
+      memory: 384Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  
+  # Node affinity for zone distribution
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                    - order-service
+            topologyKey: kubernetes.io/hostname
+
+inventoryService:
+  replicaCount: 3
+  image:
+    pullPolicy: IfNotPresent
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  resources:
+    requests:
+      cpu: 300m
+      memory: 384Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                    - inventory-service
+            topologyKey: kubernetes.io/hostname
+
+# Retry worker configuration
+retryWorker:
+  replicaCount: 3
+  image:
+    pullPolicy: IfNotPresent
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 800m
+      memory: 1Gi
+  
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                    - retry-worker
+            topologyKey: kubernetes.io/hostname
+
+# High priority for production workloads
+priorityClassName: high-priority
+
+# Monitoring
+monitoring:
+  prometheus:
+    enabled: true

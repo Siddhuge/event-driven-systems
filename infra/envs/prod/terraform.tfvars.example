@@ -1,0 +1,30 @@
+# Copy this file to terraform.tfvars and update with your values
+# IMPORTANT: Keep sensitive values out of version control!
+
+environment  = "prod"
+location     = "Central India"
+project_name = "event-driven"
+
+# PRODUCTION: Set authorized IP ranges for API server access
+# This is CRITICAL for security - only allow known IPs
+aks_authorized_ips = [
+  # "203.0.113.0/24",   # Example: Your organization's IP range
+  # "198.51.100.0/25"   # Example: VPN gateway IP
+]
+
+# Optional launch-time secrets to create in Key Vault.
+# For hosted pipeline agents, public network access may need to be temporarily enabled
+# or the pipeline must run from a self-hosted agent with private Key Vault access.
+key_vault_public_network_access_enabled = false
+key_vault_network_acls_default_action   = "Deny"
+key_vault_secrets                       = {}
+
+tags = {
+  "Managed-By"   = "Terraform"
+  "Cost-Center"  = "Engineering"
+  "Compliance"   = "SOC2"
+  "Owner"        = "Platform-Team"
+  "Backup"       = "true"
+  "Environment"  = "Production"
+  "CriticalData" = "true"
+}

@@ -1,0 +1,205 @@
+global:
+  imageRegistry: <ACR_NAME>.azurecr.io
+  imageTag: latest
+  imagePullPolicy: IfNotPresent
+  # Enable replica pod disruption budgets globally
+  enablePodDisruptionBudgets: true
+
+serviceAccount:
+  create: true
+  name: ""
+  # Annotations for Workload Identity
+  annotations: {}
+    # azure.workload.identity/client-id: "YOUR_CLIENT_ID"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+  # Windows support
+  windowsOptions: null
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+  # Enforce seccomp profile
+  seccompProfile:
+    type: RuntimeDefault
+
+config:
+  kafkaBroker: kafka:29092
+  orderClientId: order-service
+  logLevel: info
+
+# Secret management: use Azure Key Vault CSI driver in production
+secrets:
+  create: true
+  rabbitmqUrl: amqp://rabbitmq:5672
+  redisUrl: redis://redis:6379
+  jwtSecret: "change-me-use-keyvault-in-production"
+  existingSecret: ""
+
+# Azure Key Vault CSI driver integration (production recommended)
+# Enable this when deploying to AKS with Key Vault CSI driver installed
+keyVault:
+  enabled: false
+  name: ""                    # e.g., "event-driven-dev-kv"
+  tenantId: ""               # Azure Tenant ID
+  clientId: ""               # Workload Identity Client ID
+  secretsVersion: v1         # secrets endpoint version
+  
+  # Secret mappings - Key Vault name -> K8s secret key
+  secretsMap:
+    rabbitmq-url: RABBITMQ_URL
+    redis-url: REDIS_URL
+    jwt-secret: JWT_SECRET
+
+# Azure Workload Identity federation (RECOMMENDED for production)
+# Enables secure, token-based authentication without managing credentials
+workloadIdentity:
+  enabled: false
+  clientId: ""               # Azure Entra Application (client) ID
+  tenantId: ""               # Azure Tenant ID
+  # OIDC issuer URL (auto-discovered from AKS cluster metadata)
+  
+# OpenTelemetry tracing (optional - requires OTEL collector)
+otel:
+  enabled: "true"
+  endpoint: "http://otel-collector:4318/v1/traces"
+  samplingRate: "0.1"        # Sample 10% of traces by default
+
+# Ingress with TLS via cert-manager (optional)
+ingress:
+  enabled: false
+  host: "orders.example.com"
+  certIssuer: letsencrypt-prod
+  className: "nginx"
+  annotations: {}
+
+# Liveness and readiness probe configuration
+probes:
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 2
+
+orderService:
+  replicaCount: 3
+  image:
+    repository: order-service
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+    annotations: {}
+  
+  # Resource requests and limits (tuned for typical workloads)
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  # Horizontal Pod Autoscaling
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  # Pod Disruption Budget for high availability
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  
+  # Node affinity and tolerations for workload distribution
+  affinity: {}
+  tolerations: []
+
+inventoryService:
+  replicaCount: 2
+  image:
+    repository: inventory-service
+    pullPolicy: IfNotPresent
+  
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  
+  affinity: {}
+  tolerations: []
+
+retryWorker:
+  replicaCount: 2
+  image:
+    repository: inventory-service
+    pullPolicy: IfNotPresent
+  
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 400m
+      memory: 512Mi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  
+  affinity: {}
+  tolerations: []
+
+# Network policies for pod-to-pod communication control
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+# Pod Priority (for production clusters with prioritization)
+priorityClassName: ""  # Set to "high-priority" or similar in production
+
+# Monitoring and observability tags
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+    path: /metrics

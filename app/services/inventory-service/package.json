@@ -1,0 +1,41 @@
+{
+  "name": "inventory-service",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "retry-worker": "node src/rabbitmq/retryConsumer.js",
+    "test": "jest --coverage",
+    "test:ci": "jest --coverage --coverageReporters=lcov --coverageReporters=text --forceExit"
+  },
+  "dependencies": {
+    "@opentelemetry/auto-instrumentations-node": "^0.44.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.49.0",
+    "@opentelemetry/sdk-node": "^0.49.0",
+    "amqplib": "^0.10.9",
+    "dotenv": "^16.4.5",
+    "ioredis": "^5.4.1",
+    "kafkajs": "^2.2.4",
+    "pino": "^9.0.0",
+    "prom-client": "^15.1.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageThreshold": {
+      "global": {
+        "branches": 55,
+        "functions": 65,
+        "lines": 65,
+        "statements": 65
+      }
+    },
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/tracing.js",
+      "!src/health.js"
+    ]
+  }
+}

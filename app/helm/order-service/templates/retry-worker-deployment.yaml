@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "event-driven-azure.fullname" . }}-retry-worker
+  labels:
+    {{- include "event-driven-azure.labels" . | nindent 4 }}
+    app.kubernetes.io/component: retry-worker
+spec:
+  {{- if not .Values.retryWorker.autoscaling.enabled }}
+  replicas: {{ .Values.retryWorker.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: retry-worker
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8080"
+      labels:
+        {{- include "event-driven-azure.labels" . | nindent 8 }}
+        app.kubernetes.io/component: retry-worker
+    spec:
+      serviceAccountName: {{ include "event-driven-azure.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: retry-worker
+          image: {{ include "event-driven-azure.image" (dict "root" . "repository" .Values.retryWorker.image.repository) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          command: ["node", "src/rabbitmq/retryConsumer.js"]
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: retry-worker
+            - name: OTEL_ENABLED
+              value: {{ .Values.otel.enabled | quote }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otel.endpoint | quote }}
+            - name: KAFKA_BROKER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "event-driven-azure.fullname" . }}-config
+                  key: KAFKA_BROKER
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "event-driven-azure.secretName" . }}
+                  key: RABBITMQ_URL
+          ports:
+            - name: health
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.retryWorker.resources | nindent 12 }}

@@ -1,0 +1,38 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "event-driven-azure.fullname" . }}-ingress
+  labels:
+    {{- include "event-driven-azure.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.certIssuer | quote }}
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ include "event-driven-azure.fullname" . }}-tls
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /orders
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "event-driven-azure.fullname" . }}-order
+                port:
+                  number: {{ .Values.orderService.service.port }}
+          - path: /api-docs
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "event-driven-azure.fullname" . }}-order
+                port:
+                  number: {{ .Values.orderService.service.port }}
+{{- end -}}

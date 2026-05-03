@@ -1,0 +1,64 @@
+# Dev environment — minimal resources, reduced replicas, diagnostics enabled
+global:
+  imageTag: latest
+
+config:
+  logLevel: debug
+
+otel:
+  enabled: "false"  # Disable OTel in dev to reduce overhead
+  samplingRate: "1.0"
+
+ingress:
+  enabled: true
+  host: "orders-dev.example.com"
+  certIssuer: letsencrypt-staging
+
+orderService:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 384Mi
+  podDisruptionBudget:
+    enabled: false
+
+inventoryService:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 384Mi
+  podDisruptionBudget:
+    enabled: false
+
+retryWorker:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  podDisruptionBudget:
+    enabled: false
+
+networkPolicy:
+  enabled: false  # Disabled in dev for easier debugging
+
+# Disable workload identity in dev (use K8s secrets instead)
+workloadIdentity:
+  enabled: false

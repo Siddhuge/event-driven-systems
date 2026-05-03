@@ -1,0 +1,46 @@
+# Staging — production-like with reduced replicas; uses Key Vault CSI
+keyVault:
+  enabled: true
+  name: kv-event-driven-staging
+
+workloadIdentity:
+  enabled: true
+
+otel:
+  enabled: "true"
+  endpoint: "http://otel-collector.monitoring:4318/v1/traces"
+
+ingress:
+  enabled: true
+  host: "orders-staging.example.com"
+  certIssuer: letsencrypt-staging
+
+orderService:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+inventoryService:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+
+retryWorker:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
