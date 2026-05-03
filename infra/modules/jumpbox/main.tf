@@ -19,7 +19,7 @@ resource "azurerm_network_security_group" "jumpbox" {
 
   lifecycle {
     precondition {
-      condition     = length(var.allowed_ssh_cidrs) > 0
+      condition     = !var.enabled || length(var.allowed_ssh_cidrs) > 0
       error_message = "allowed_ssh_cidrs must contain at least one CIDR when the jumpbox is enabled."
     }
   }
@@ -105,7 +105,7 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
 
   lifecycle {
     precondition {
-      condition     = can(regex("^ssh-rsa ", var.admin_ssh_public_key))
+      condition     = !var.enabled || can(regex("^ssh-rsa ", var.admin_ssh_public_key))
       error_message = "admin_ssh_public_key must be provided and must start with ssh-rsa when the jumpbox is enabled."
     }
   }
