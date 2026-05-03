@@ -9,6 +9,9 @@ locals {
 }
 
 resource "azurerm_key_vault" "kv" {
+  # checkov:skip=CKV_AZURE_109:Dev env uses network_acls default_action=Allow for pipeline bootstrap; prod uses Deny with AzureServices bypass
+  # checkov:skip=CKV_AZURE_189:Dev env intentionally has public_network_access_enabled=true so the pipeline can write secrets on first deploy
+  # checkov:skip=CKV2_AZURE_32:Private endpoint for Key Vault requires VNet integration and is planned as a post-bootstrap hardening step
   name                = var.name
   location            = var.location
   resource_group_name = var.rg_name
@@ -20,7 +23,7 @@ resource "azurerm_key_vault" "kv" {
   enabled_for_disk_encryption     = true
   enabled_for_template_deployment = true
 
-  purge_protection_enabled   = var.environment == "prod" ? true : false
+  purge_protection_enabled   = true # CKV_AZURE_42/110: always enabled; 90-day retention prevents accidental permanent deletion
   soft_delete_retention_days = 90
 
   # Network security

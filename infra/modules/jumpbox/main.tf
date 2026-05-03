@@ -42,6 +42,7 @@ resource "azurerm_network_security_rule" "ssh" {
 }
 
 resource "azurerm_network_interface" "jumpbox" {
+  # checkov:skip=CKV_AZURE_119:Jumpbox NIC has a public IP by design; SSH access is restricted to trusted CIDRs via the NSG rule
   count = var.enabled ? 1 : 0
 
   name                = "${var.name}-nic"
@@ -76,6 +77,7 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
   tags                  = var.tags
 
   disable_password_authentication = true
+  allow_extension_operations      = false # CKV_AZURE_50: prevent Azure VM agent extensions from being installed
 
   identity {
     type = "SystemAssigned"

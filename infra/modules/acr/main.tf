@@ -1,4 +1,5 @@
 resource "azurerm_container_registry" "acr" {
+  # checkov:skip=CKV_AZURE_165:Geo-replication to a second region is cost-prohibitive for this project scope
   name                = var.name
   resource_group_name = var.rg_name
   location            = var.location
@@ -6,14 +7,24 @@ resource "azurerm_container_registry" "acr" {
   admin_enabled       = false
 
   # Security settings
-  public_network_access_enabled = false # Disable public access
-  quarantine_policy_enabled     = true  # Enable image quarantine
-  zone_redundancy_enabled       = var.environment == "prod" ? true : false
+  public_network_access_enabled = false
+  quarantine_policy_enabled     = true
+  zone_redundancy_enabled       = true # CKV_AZURE_233: Premium SKU supports zone redundancy in all envs
 
   # Encryption and audit
-  data_endpoint_enabled = true
-
+  data_endpoint_enabled  = true
   anonymous_pull_enabled = false
+
+  # CKV_AZURE_167: purge untagged manifests after 7 days to reduce attack surface and storage cost
+  retention_policy {
+    days    = 7
+    enabled = true
+  }
+
+  # CKV_AZURE_164: enforce content trust so only signed images can be pulled
+  trust_policy {
+    enabled = true
+  }
 
   tags = var.tags
 

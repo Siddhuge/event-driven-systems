@@ -27,6 +27,20 @@ resource "azurerm_subnet" "jumpbox" {
   address_prefixes     = ["10.0.2.0/24"]
 }
 
+# Subnet-level NSG for the jumpbox subnet (CKV2_AZURE_31)
+# The jumpbox module additionally attaches a NIC-level NSG that restricts SSH to trusted CIDRs.
+resource "azurerm_network_security_group" "jumpbox_subnet" {
+  name                = "${var.name}-jumpbox-subnet-nsg"
+  location            = var.location
+  resource_group_name = var.rg_name
+  tags                = var.tags
+}
+
+resource "azurerm_subnet_network_security_group_association" "jumpbox" {
+  subnet_id                 = azurerm_subnet.jumpbox.id
+  network_security_group_id = azurerm_network_security_group.jumpbox_subnet.id
+}
+
 # Network Security Group for AKS
 resource "azurerm_network_security_group" "aks_nsg" {
   name                = "${var.name}-aks-nsg"
