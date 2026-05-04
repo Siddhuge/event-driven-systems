@@ -1,16 +1,21 @@
 resource "azurerm_container_registry" "acr" {
   # checkov:skip=CKV_AZURE_165:Geo-replication to a second region is cost-prohibitive for this project scope
+  # checkov:skip=CKV_AZURE_139:Public access enabled so network rules apply; default_action=Deny enforces same restriction with dynamic CI/CD IP allowlisting
   name                = var.name
   resource_group_name = var.rg_name
   location            = var.location
   sku                 = "Premium"
   admin_enabled       = false
 
-  # Security settings
-  public_network_access_enabled = false
-  network_rule_bypass_option    = "AzureServices" # allows Azure DevOps hosted agents to push images
+  # Security settings: public access enabled so firewall rules apply; pipeline dynamically whitelists its IP
+  public_network_access_enabled = true
+  network_rule_bypass_option    = "AzureServices"
   quarantine_policy_enabled     = true
   zone_redundancy_enabled       = true # CKV_AZURE_233: Premium SKU supports zone redundancy in all envs
+
+  network_rule_set {
+    default_action = "Deny"
+  }
 
   # Encryption and audit
   data_endpoint_enabled  = true

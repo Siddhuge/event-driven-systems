@@ -154,6 +154,23 @@ stages:
           displayName: Generate Image Tags
           workingDirectory: $(Build.SourcesDirectory)
 
+        - task: AzureCLI@2
+          displayName: Whitelist Pipeline Agent IP in ACR
+          inputs:
+            azureSubscription: $(azureServiceConnection)
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              set -eu
+              AGENT_IP=$(curl -sf https://ifconfig.me)
+              echo "Pipeline agent IP: ${AGENT_IP}"
+              az acr network-rule add \
+                --name "$(acrName)" \
+                --resource-group "$(azureResourceGroup)" \
+                --ip-address "${AGENT_IP}/32"
+              echo "##vso[task.setvariable variable=AgentIP]${AGENT_IP}"
+              sleep 10
+
         - task: Docker@2
           displayName: Build & Push Order Service Image
           inputs:
@@ -177,6 +194,20 @@ stages:
             tags: |
               $(ImageTag)
               $(LatestTag)
+
+        - task: AzureCLI@2
+          displayName: Remove Pipeline Agent IP from ACR
+          condition: always()
+          inputs:
+            azureSubscription: $(azureServiceConnection)
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              set -eu
+              az acr network-rule remove \
+                --name "$(acrName)" \
+                --resource-group "$(azureResourceGroup)" \
+                --ip-address "$(AgentIP)/32" || true
 
         - task: HelmInstaller@1
           displayName: Install Helm
