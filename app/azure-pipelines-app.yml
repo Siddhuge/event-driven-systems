@@ -175,7 +175,7 @@ stages:
               az acr network-rule add \
                 --name "$(acrName)" \
                 --resource-group "$(azureResourceGroup)" \
-                --ip-address "${AGENT_IP}/32"
+                --ip-address "${AGENT_IP}/32" || true
               echo "##vso[task.setvariable variable=AgentIP]${AGENT_IP}"
               sleep 10
 
@@ -260,7 +260,7 @@ stages:
               az acr network-rule add \
                 --name "$(acrName)" \
                 --resource-group "$(azureResourceGroup)" \
-                --ip-address "${AGENT_IP}/32"
+                --ip-address "${AGENT_IP}/32" || true
               echo "##vso[task.setvariable variable=AgentIP]${AGENT_IP}"
               sleep 10
 
