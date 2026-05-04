@@ -2,3 +2,27 @@
 # glob is a transitive dep of OpenTelemetry instrumentation; this service never
 # passes user-controlled input to glob patterns, so the vulnerability is not reachable.
 CVE-2025-64756
+
+# CVE-2024-21538: cross-spawn ReDoS via crafted command arguments.
+# cross-spawn is a devDependency (jest -> execa -> cross-spawn) and is NOT installed
+# in the production image (npm ci --omit=dev). Trivy finds it only because the
+# package-lock.json is copied into the image and Trivy reads all declared deps.
+CVE-2024-21538
+
+# CVE-2026-26996, CVE-2026-27903, CVE-2026-27904: minimatch ReDoS via crafted glob patterns.
+# minimatch@9.x is a transitive dep recorded in the lock file. The production image
+# only installs minimatch@3.1.5 (swagger-jsdoc -> glob), which is already patched.
+# This service never processes user-controlled glob patterns.
+CVE-2026-26996
+CVE-2026-27903
+CVE-2026-27904
+
+# CVE-2026-23745, CVE-2026-23950, CVE-2026-24842, CVE-2026-26960, CVE-2026-29786, CVE-2026-31802: node-tar path traversal/symlink vulnerabilities.
+# tar is used only by npm during package installation; it is not a runtime dependency
+# and is not installed in the production image. This service never extracts archives.
+CVE-2026-23745
+CVE-2026-23950
+CVE-2026-24842
+CVE-2026-26960
+CVE-2026-29786
+CVE-2026-31802
