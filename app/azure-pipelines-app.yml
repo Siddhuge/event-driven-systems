@@ -190,29 +190,39 @@ stages:
               echo "##vso[task.setvariable variable=AgentIP]${AGENT_IP}"
               sleep 10
 
-        - task: Docker@2
+        - task: AzureCLI@2
           displayName: Build & Push Order Service Image
           inputs:
-            containerRegistry: ACR-Connection
-            repository: $(orderImageName)
-            command: buildAndPush
-            Dockerfile: app/services/order-service/Dockerfile
-            buildContext: app/services/order-service
-            tags: |
-              $(ImageTag)
-              $(LatestTag)
+            azureSubscription: $(azureServiceConnection)
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              set -eu
+              az acr login --name "$(acrName)"
+              docker build \
+                -t "$(acrName).azurecr.io/$(orderImageName):$(ImageTag)" \
+                -t "$(acrName).azurecr.io/$(orderImageName):latest" \
+                -f app/services/order-service/Dockerfile \
+                app/services/order-service
+              docker push "$(acrName).azurecr.io/$(orderImageName):$(ImageTag)"
+              docker push "$(acrName).azurecr.io/$(orderImageName):latest"
 
-        - task: Docker@2
+        - task: AzureCLI@2
           displayName: Build & Push Inventory Service Image
           inputs:
-            containerRegistry: ACR-Connection
-            repository: $(inventoryImageName)
-            command: buildAndPush
-            Dockerfile: app/services/inventory-service/Dockerfile
-            buildContext: app/services/inventory-service
-            tags: |
-              $(ImageTag)
-              $(LatestTag)
+            azureSubscription: $(azureServiceConnection)
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              set -eu
+              az acr login --name "$(acrName)"
+              docker build \
+                -t "$(acrName).azurecr.io/$(inventoryImageName):$(ImageTag)" \
+                -t "$(acrName).azurecr.io/$(inventoryImageName):latest" \
+                -f app/services/inventory-service/Dockerfile \
+                app/services/inventory-service
+              docker push "$(acrName).azurecr.io/$(inventoryImageName):$(ImageTag)"
+              docker push "$(acrName).azurecr.io/$(inventoryImageName):latest"
 
         - task: AzureCLI@2
           displayName: Remove Pipeline Agent IP from ACR
