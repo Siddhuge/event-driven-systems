@@ -4,23 +4,33 @@ trigger:
   branches:
     include:
       - main
+  paths:
+    include:
+      - infra/*
+    exclude:
+      - services/*
+      - helm/*
+      - README.md
 
 pr:
   branches:
     include:
       - main
+  paths:
+    include:
+      - infra/*
 
 variables:
   azureServiceConnection: IAC-Conn
   terraformVersion: 1.5.7
   # Environment-specific variables
-  jumpboxEnabledDev: 'false'
-  jumpboxEnabledProd: 'false'
-  keyVaultNameDev: 'event-driven-dev-kv'
-  jumpboxSshPublicKeyDev: ''
-  jumpboxAllowedSshCidrDev: ''
-  jumpboxSshPublicKeyProd: ''
-  jumpboxAllowedSshCidrProd: ''
+  jumpboxEnabledDev: "false"
+  jumpboxEnabledProd: "false"
+  keyVaultNameDev: "event-driven-dev-kv"
+  jumpboxSshPublicKeyDev: ""
+  jumpboxAllowedSshCidrDev: ""
+  jumpboxSshPublicKeyProd: ""
+  jumpboxAllowedSshCidrProd: ""
 
 stages:
 
@@ -202,10 +212,10 @@ stages:
                       export ARM_OIDC_TOKEN="${idToken}"
 
                       terraform -chdir="$TF_DIR" init -input=false
-                      
+
                       echo "⏳ Applying Terraform plan..."
                       terraform -chdir="$TF_DIR" apply -auto-approve "$(Pipeline.Workspace)/dev-plan/tfplan"
-                      
+
                       echo "✅ DEV infrastructure deployed successfully"
 
   # =========================================
@@ -371,8 +381,8 @@ stages:
                       export ARM_OIDC_TOKEN="${idToken}"
 
                       terraform -chdir="$TF_DIR" init -input=false
-                      
+
                       echo "⏳ Applying Terraform plan..."
                       terraform -chdir="$TF_DIR" apply -auto-approve "$(Pipeline.Workspace)/prod-plan/tfplan"
-                      
+
                       echo "✅ PROD infrastructure deployed successfully"
