@@ -5,6 +5,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   # checkov:skip=CKV_AZURE_226:Standard_DS2_v2 (dev node size) has only 14 GB temp storage, which is insufficient for ephemeral OS disks
   # checkov:skip=CKV_AZURE_232:Single node pool design; a dedicated user node pool for workloads is out of scope for this bootstrap module
   # checkov:skip=CKV_AZURE_170:Prod enforces Standard SLA tier via sku_tier; Free tier is intentional for dev to control costs
+  # checkov:skip=CKV_AZURE_227:EncryptionAtHost requires Microsoft.Compute/EncryptionAtHost feature registration at subscription level
   name                = var.name
   location            = var.location
   resource_group_name = var.rg_name
@@ -37,7 +38,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     # Security settings
     os_disk_size_gb             = 50
     os_disk_type                = "Managed"
-    enable_host_encryption      = true # CKV_AZURE_227: encrypt temp disks and data flows at host level
+    enable_host_encryption      = var.enable_host_encryption
     temporary_name_for_rotation = "tmp1"
   }
 

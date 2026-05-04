@@ -85,6 +85,12 @@ variable "admin_group_object_ids" {
   }
 }
 
+variable "enable_host_encryption" {
+  type        = bool
+  description = "Whether to enable host-level encryption on AKS nodes. Requires Microsoft.Compute/EncryptionAtHost feature registration on the subscription."
+  default     = false
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags to apply to AKS cluster"

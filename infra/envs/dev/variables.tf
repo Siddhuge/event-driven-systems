@@ -81,6 +81,12 @@ variable "aks_admin_group_object_ids" {
   default     = ["bc40bcb6-2e7e-42d2-9608-832ed4692f92"]
 }
 
+variable "aks_enable_host_encryption" {
+  type        = bool
+  description = "Enable host encryption on AKS nodes. Requires Microsoft.Compute/EncryptionAtHost feature registration on the subscription."
+  default     = false
+}
+
 variable "jumpbox_enabled" {
   type        = bool
   description = "Whether to create a dev jumpbox in the AKS VNet"

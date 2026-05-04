@@ -81,6 +81,12 @@ variable "aks_admin_group_object_ids" {
   default     = ["bc40bcb6-2e7e-42d2-9608-832ed4692f92"]
 }
 
+variable "aks_enable_host_encryption" {
+  type        = bool
+  description = "Enable host encryption on AKS nodes. Requires Microsoft.Compute/EncryptionAtHost feature registration on the subscription."
+  default     = false
+}
+
 variable "key_vault_public_network_access_enabled" {
   type        = bool
   description = "Whether public network access is enabled for prod Key Vault"
