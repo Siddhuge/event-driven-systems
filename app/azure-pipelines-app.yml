@@ -248,6 +248,23 @@ stages:
           displayName: Install Trivy
 
         - task: AzureCLI@2
+          displayName: Whitelist Pipeline Agent IP in ACR
+          inputs:
+            azureSubscription: $(azureServiceConnection)
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              set -eu
+              AGENT_IP=$(curl -sf https://ifconfig.me)
+              echo "Pipeline agent IP: ${AGENT_IP}"
+              az acr network-rule add \
+                --name "$(acrName)" \
+                --resource-group "$(azureResourceGroup)" \
+                --ip-address "${AGENT_IP}/32"
+              echo "##vso[task.setvariable variable=AgentIP]${AGENT_IP}"
+              sleep 10
+
+        - task: AzureCLI@2
           displayName: Scan Container Images
           inputs:
             azureSubscription: $(azureServiceConnection)
@@ -273,6 +290,20 @@ stages:
                 --format sarif \
                 --output inventory-service-trivy.sarif \
                 "$(acrName).azurecr.io/$(inventoryImageName):${IMAGE_TAG}"
+
+        - task: AzureCLI@2
+          displayName: Remove Pipeline Agent IP from ACR
+          condition: always()
+          inputs:
+            azureSubscription: $(azureServiceConnection)
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              set -eu
+              az acr network-rule remove \
+                --name "$(acrName)" \
+                --resource-group "$(azureResourceGroup)" \
+                --ip-address "$(AgentIP)/32" || true
 
         - task: PublishBuildArtifacts@1
           condition: always()
