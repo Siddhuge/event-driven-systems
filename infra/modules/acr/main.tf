@@ -10,7 +10,8 @@ resource "azurerm_container_registry" "acr" {
   # Security settings: public access enabled so firewall rules apply; pipeline dynamically whitelists its IP
   public_network_access_enabled = true
   network_rule_bypass_option    = "AzureServices"
-  quarantine_policy_enabled     = true
+  # checkov:skip=CKV_AZURE_162:Quarantine blocks AcrPull callers from seeing newly-pushed images; pipeline Trivy scanning is the security gate
+  quarantine_policy_enabled     = false
   zone_redundancy_enabled       = true # CKV_AZURE_233: Premium SKU supports zone redundancy in all envs
 
   network_rule_set {

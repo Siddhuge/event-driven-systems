@@ -47,9 +47,6 @@ variables:
     value: event-driven-dev-aks
   - name: keyVaultName
     value: event-driven-dev-kv
-  # Semantic versioning: using Git commit SHA + short commit count
-  - name: imageTag
-    value: "$(Build.SourceVersion.Substring(0,8))-$(Build.BuildNumber)"
   - name: skipImagePull
     value: false
 
@@ -166,15 +163,13 @@ stages:
         - checkout: self
 
         - script: |
-            # Generate semantic version tags
             SHORT_SHA=$(git rev-parse --short HEAD)
-            BUILD_NUM=$(Build.BuildNumber)
-            IMAGE_TAG="${SHORT_SHA}-${BUILD_NUM}"
-            LATEST_TAG="latest"
-            
+            IMAGE_TAG="${SHORT_SHA}-$(Build.BuildNumber)"
+            echo "##vso[task.setvariable variable=ImageTag;isOutput=true]${IMAGE_TAG}"
             echo "##vso[task.setvariable variable=ImageTag]${IMAGE_TAG}"
-            echo "##vso[task.setvariable variable=LatestTag]${LATEST_TAG}"
-            echo "📦 Built tags: ${IMAGE_TAG}, ${LATEST_TAG}"
+            echo "##vso[task.setvariable variable=LatestTag]latest"
+            echo "📦 Image tag: ${IMAGE_TAG}"
+          name: GenerateImageTags
           displayName: Generate Image Tags
           workingDirectory: $(Build.SourcesDirectory)
 
@@ -245,6 +240,8 @@ stages:
 - stage: ImageSecurityScan
   displayName: 🔒 Image Security Scan
   dependsOn: Build
+  variables:
+    ImageTag: $[ stageDependencies.Build.BuildPush.outputs['GenerateImageTags.ImageTag'] ]
   jobs:
     - job: ScanContainerImages
       displayName: Scan images for vulnerabilities
@@ -290,14 +287,13 @@ stages:
               set -eu
               az acr login --name "$(acrName)"
 
-              IMAGE_TAG="$(git rev-parse --short HEAD)-$(Build.BuildNumber)"
+              IMAGE_TAG="$(ImageTag)"
               echo "🔍 Scanning image tag: ${IMAGE_TAG}"
 
               ORDER_IMAGE="$(acrName).azurecr.io/$(orderImageName):${IMAGE_TAG}"
               INVENTORY_IMAGE="$(acrName).azurecr.io/$(inventoryImageName):${IMAGE_TAG}"
 
-              # Pull images locally so Trivy scans the local Docker daemon
-              # (Trivy's remote scanner does not inherit az acr login credentials)
+              # Pull images locally; Trivy's remote scanner does not inherit az acr login credentials
               docker pull "${ORDER_IMAGE}"
               docker pull "${INVENTORY_IMAGE}"
 
@@ -343,6 +339,8 @@ stages:
   displayName: 🔐 Pre-Deployment Approval
   dependsOn: ImageSecurityScan
   condition: succeeded()
+  variables:
+    ImageTag: $[ stageDependencies.Build.BuildPush.outputs['GenerateImageTags.ImageTag'] ]
   jobs:
     - job: AwaitApproval
       displayName: Await manual approval
@@ -374,6 +372,8 @@ stages:
   displayName: 🚀 Deploy to AKS
   dependsOn: PreDeploymentApproval
   condition: succeeded()
+  variables:
+    ImageTag: $[ stageDependencies.Build.BuildPush.outputs['GenerateImageTags.ImageTag'] ]
   jobs:
     - deployment: DeployToAKS
       displayName: Deploy services to AKS
