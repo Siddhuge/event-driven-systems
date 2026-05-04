@@ -2,6 +2,22 @@ trigger:
   branches:
     include:
       - main
+  paths:
+    include:
+      - app/*
+    exclude:
+      - services/*
+      - infra/*
+      - helm/*
+      - README.md
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - app/*
 
 variables:
   - group: event-driven-azure-dev
