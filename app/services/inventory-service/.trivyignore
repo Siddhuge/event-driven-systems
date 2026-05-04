@@ -1,0 +1,4 @@
+# CVE-2025-64756: glob command injection via malicious filenames.
+# glob is a transitive dep of OpenTelemetry instrumentation; this service never
+# passes user-controlled input to glob patterns, so the vulnerability is not reachable.
+CVE-2025-64756

@@ -311,12 +311,14 @@ stages:
               trivy image \
                 --severity "$(securityScanSeverity)" \
                 --ignore-unfixed \
+                --ignorefile app/services/order-service/.trivyignore \
                 --exit-code 1 \
                 "${ORDER_IMAGE}"
 
               trivy image \
                 --severity "$(securityScanSeverity)" \
                 --ignore-unfixed \
+                --ignorefile app/services/inventory-service/.trivyignore \
                 --exit-code 1 \
                 "${INVENTORY_IMAGE}"
 
@@ -324,6 +326,7 @@ stages:
               trivy image \
                 --severity "$(securityScanSeverity)" \
                 --ignore-unfixed \
+                --ignorefile app/services/order-service/.trivyignore \
                 --skip-db-update \
                 --format sarif \
                 --output order-service-trivy.sarif \
@@ -332,6 +335,7 @@ stages:
               trivy image \
                 --severity "$(securityScanSeverity)" \
                 --ignore-unfixed \
+                --ignorefile app/services/inventory-service/.trivyignore \
                 --skip-db-update \
                 --format sarif \
                 --output inventory-service-trivy.sarif \
