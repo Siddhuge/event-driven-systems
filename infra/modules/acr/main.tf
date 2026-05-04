@@ -8,6 +8,7 @@ resource "azurerm_container_registry" "acr" {
 
   # Security settings
   public_network_access_enabled = false
+  network_rule_bypass_option    = "AzureServices" # allows Azure DevOps hosted agents to push images
   quarantine_policy_enabled     = true
   zone_redundancy_enabled       = true # CKV_AZURE_233: Premium SKU supports zone redundancy in all envs
 
