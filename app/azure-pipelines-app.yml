@@ -277,19 +277,27 @@ stages:
               IMAGE_TAG="$(git rev-parse --short HEAD)-$(Build.BuildNumber)"
               echo "🔍 Scanning image tag: ${IMAGE_TAG}"
 
+              ORDER_IMAGE="$(acrName).azurecr.io/$(orderImageName):${IMAGE_TAG}"
+              INVENTORY_IMAGE="$(acrName).azurecr.io/$(inventoryImageName):${IMAGE_TAG}"
+
+              # Pull images locally so Trivy scans the local Docker daemon
+              # (Trivy's remote scanner does not inherit az acr login credentials)
+              docker pull "${ORDER_IMAGE}"
+              docker pull "${INVENTORY_IMAGE}"
+
               trivy image \
                 --severity "$(securityScanSeverity)" \
                 --exit-code 1 \
                 --format sarif \
                 --output order-service-trivy.sarif \
-                "$(acrName).azurecr.io/$(orderImageName):${IMAGE_TAG}"
+                "${ORDER_IMAGE}"
 
               trivy image \
                 --severity "$(securityScanSeverity)" \
                 --exit-code 1 \
                 --format sarif \
                 --output inventory-service-trivy.sarif \
-                "$(acrName).azurecr.io/$(inventoryImageName):${IMAGE_TAG}"
+                "${INVENTORY_IMAGE}"
 
         - task: AzureCLI@2
           displayName: Remove Pipeline Agent IP from ACR
