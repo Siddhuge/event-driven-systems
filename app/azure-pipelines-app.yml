@@ -273,8 +273,8 @@ stages:
             inlineScript: |
               set -eu
               az acr login --name "$(acrName)"
-              
-              IMAGE_TAG=$(ImageTag)
+
+              IMAGE_TAG="$(git rev-parse --short HEAD)-$(Build.BuildNumber)"
               echo "🔍 Scanning image tag: ${IMAGE_TAG}"
 
               trivy image \
