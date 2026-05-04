@@ -11,8 +11,9 @@ resource "azurerm_container_registry" "acr" {
   public_network_access_enabled = true
   network_rule_bypass_option    = "AzureServices"
   # checkov:skip=CKV_AZURE_162:Quarantine blocks AcrPull callers from seeing newly-pushed images; pipeline Trivy scanning is the security gate
-  quarantine_policy_enabled     = false
-  zone_redundancy_enabled       = true # CKV_AZURE_233: Premium SKU supports zone redundancy in all envs
+  # checkov:skip=CKV_AZURE_166:Quarantine blocks AcrPull callers from seeing newly-pushed images; pipeline Trivy scanning is the security gate
+  quarantine_policy_enabled = false
+  zone_redundancy_enabled   = true # CKV_AZURE_233: Premium SKU supports zone redundancy in all envs
 
   network_rule_set {
     default_action = "Deny"
