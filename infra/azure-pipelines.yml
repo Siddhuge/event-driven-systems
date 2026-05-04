@@ -175,6 +175,13 @@ stages:
                   artifact: dev-plan
                   displayName: 📥 Download DEV Plan
 
+                - script: |
+                    curl -fsSLo terraform.zip "https://releases.hashicorp.com/terraform/$(terraformVersion)/terraform_$(terraformVersion)_linux_amd64.zip"
+                    unzip -q terraform.zip
+                    sudo mv terraform /usr/local/bin/terraform
+                    terraform version
+                  displayName: Install Terraform
+
                 - task: AzureCLI@2
                   displayName: 🚀 Apply Terraform (DEV)
                   inputs:
@@ -336,6 +343,13 @@ stages:
                 - download: current
                   artifact: prod-plan
                   displayName: 📥 Download PROD Plan
+
+                - script: |
+                    curl -fsSLo terraform.zip "https://releases.hashicorp.com/terraform/$(terraformVersion)/terraform_$(terraformVersion)_linux_amd64.zip"
+                    unzip -q terraform.zip
+                    sudo mv terraform /usr/local/bin/terraform
+                    terraform version
+                  displayName: Install Terraform
 
                 - task: AzureCLI@2
                   displayName: 🚀 Apply Terraform (PROD)
