@@ -307,10 +307,24 @@ stages:
               docker pull "${ORDER_IMAGE}"
               docker pull "${INVENTORY_IMAGE}"
 
+              # Gate scans: table format so findings are visible in the pipeline log
               trivy image \
                 --severity "$(securityScanSeverity)" \
                 --ignore-unfixed \
                 --exit-code 1 \
+                "${ORDER_IMAGE}"
+
+              trivy image \
+                --severity "$(securityScanSeverity)" \
+                --ignore-unfixed \
+                --exit-code 1 \
+                "${INVENTORY_IMAGE}"
+
+              # Artifact scans: SARIF for publishing (no gate, already checked above)
+              trivy image \
+                --severity "$(securityScanSeverity)" \
+                --ignore-unfixed \
+                --skip-db-update \
                 --format sarif \
                 --output order-service-trivy.sarif \
                 "${ORDER_IMAGE}"
@@ -318,7 +332,7 @@ stages:
               trivy image \
                 --severity "$(securityScanSeverity)" \
                 --ignore-unfixed \
-                --exit-code 1 \
+                --skip-db-update \
                 --format sarif \
                 --output inventory-service-trivy.sarif \
                 "${INVENTORY_IMAGE}"
