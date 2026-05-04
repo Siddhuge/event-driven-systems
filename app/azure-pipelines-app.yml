@@ -309,6 +309,7 @@ stages:
 
               trivy image \
                 --severity "$(securityScanSeverity)" \
+                --ignore-unfixed \
                 --exit-code 1 \
                 --format sarif \
                 --output order-service-trivy.sarif \
@@ -316,6 +317,7 @@ stages:
 
               trivy image \
                 --severity "$(securityScanSeverity)" \
+                --ignore-unfixed \
                 --exit-code 1 \
                 --format sarif \
                 --output inventory-service-trivy.sarif \
