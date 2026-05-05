@@ -33,3 +33,14 @@ variable "tags" {
   description = "Tags to apply to the virtual network"
   default     = {}
 }
+
+variable "jumpbox_allowed_ssh_cidrs" {
+  type        = list(string)
+  description = "CIDR ranges allowed to SSH to the jumpbox through the subnet NSG"
+  default     = []
+
+  validation {
+    condition     = alltrue([for cidr in var.jumpbox_allowed_ssh_cidrs : can(cidrhost(cidr, 0))])
+    error_message = "All SSH source ranges must be valid CIDR blocks."
+  }
+}

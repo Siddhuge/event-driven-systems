@@ -41,6 +41,25 @@ resource "azurerm_subnet_network_security_group_association" "jumpbox" {
   network_security_group_id = azurerm_network_security_group.jumpbox_subnet.id
 }
 
+# Azure evaluates subnet NSG before NIC NSG on inbound traffic.
+# Without this rule the default DenyAllInBound blocks SSH before it
+# reaches the NIC-level NSG that enforces the trusted-CIDR restriction.
+resource "azurerm_network_security_rule" "jumpbox_subnet_ssh" {
+  count = length(var.jumpbox_allowed_ssh_cidrs) > 0 ? 1 : 0
+
+  name                        = "AllowSSHFromTrustedIPs"
+  priority                    = 100
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "22"
+  source_address_prefixes     = var.jumpbox_allowed_ssh_cidrs
+  destination_address_prefix  = "*"
+  resource_group_name         = var.rg_name
+  network_security_group_name = azurerm_network_security_group.jumpbox_subnet.name
+}
+
 # Network Security Group for AKS
 resource "azurerm_network_security_group" "aks_nsg" {
   name                = "${var.name}-aks-nsg"

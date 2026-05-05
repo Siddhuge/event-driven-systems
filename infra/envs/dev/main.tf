@@ -19,12 +19,13 @@ module "rg" {
 }
 
 module "network" {
-  source      = "../../modules/network"
-  name        = "${local.naming_prefix}-vnet"
-  location    = var.location
-  rg_name     = module.rg.name
-  tags        = local.common_tags
-  environment = var.environment
+  source                    = "../../modules/network"
+  name                      = "${local.naming_prefix}-vnet"
+  location                  = var.location
+  rg_name                   = module.rg.name
+  tags                      = local.common_tags
+  environment               = var.environment
+  jumpbox_allowed_ssh_cidrs = var.jumpbox_allowed_ssh_cidrs
 }
 
 module "acr" {
