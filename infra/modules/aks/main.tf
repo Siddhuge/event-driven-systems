@@ -44,6 +44,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   # CKV_AZURE_141 prerequisite: Azure AD RBAC must be enabled when local accounts are disabled
   azure_active_directory_role_based_access_control {
+    managed                = true
     tenant_id              = data.azurerm_client_config.current.tenant_id
     admin_group_object_ids = var.admin_group_object_ids
     azure_rbac_enabled     = true
