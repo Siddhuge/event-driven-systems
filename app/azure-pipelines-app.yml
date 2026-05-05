@@ -470,28 +470,19 @@ stages:
                   scriptLocation: inlineScript
                   inlineScript: |
                     set -eu
-
-                    az aks install-cli 2>/dev/null || true
-
-                    az aks get-credentials \
+                    {
+                      printf 'apiVersion: v1\nkind: Namespace\nmetadata:\n  name: %s\n' "$KUBERNETES_NAMESPACE"
+                      printf -- '---\napiVersion: v1\nkind: Secret\nmetadata:\n  name: %s\n  namespace: %s\n' "$RUNTIME_SECRET_NAME" "$KUBERNETES_NAMESPACE"
+                      printf 'type: Opaque\nstringData:\n'
+                      printf '  RABBITMQ_URL: "%s"\n' "$RABBITMQ_URL"
+                      printf '  REDIS_URL: "%s"\n' "$REDIS_URL"
+                      printf '  JWT_SECRET: "%s"\n' "$JWT_SECRET"
+                    } > /tmp/runtime-secret.yaml
+                    az aks command invoke \
                       --resource-group "$AZURE_RESOURCE_GROUP" \
                       --name "$AKS_CLUSTER_NAME" \
-                      --overwrite-existing
-
-                    kubelogin convert-kubeconfig -l azurecli
-
-                    kubectl create namespace "$KUBERNETES_NAMESPACE" \
-                      --dry-run=client \
-                      -o yaml | kubectl apply -f -
-
-                    kubectl create secret generic "$RUNTIME_SECRET_NAME" \
-                      --namespace "$KUBERNETES_NAMESPACE" \
-                      --from-literal=RABBITMQ_URL="$RABBITMQ_URL" \
-                      --from-literal=REDIS_URL="$REDIS_URL" \
-                      --from-literal=JWT_SECRET="$JWT_SECRET" \
-                      --dry-run=client \
-                      -o yaml | kubectl apply -f -
-                      
+                      --command "kubectl apply -f runtime-secret.yaml" \
+                      --file /tmp/runtime-secret.yaml
                     echo "✅ Kubernetes secrets updated"
                 env:
                   AZURE_RESOURCE_GROUP: $(azureResourceGroup)
@@ -502,30 +493,32 @@ stages:
                   REDIS_URL: $(redis-url)
                   JWT_SECRET: $(jwt-secret)
 
-              - task: HelmDeploy@0
-                displayName: Deploy with Helm (Atomic + Rollback)
+              - task: AzureCLI@2
+                displayName: Deploy with Helm via AKS Command Invoke
                 inputs:
-                  connectionType: Azure Resource Manager
-                  azureSubscriptionEndpoint: $(azureServiceConnection)
-                  azureResourceGroup: $(azureResourceGroup)
-                  kubernetesCluster: $(aksClusterName)
-                  namespace: $(kubernetesNamespace)
-                  command: upgrade
-                  chartType: FilePath
-                  chartPath: app/helm/order-service
-                  releaseName: $(releaseName)
-                  install: true
-                  waitForExecution: true
-                  arguments: >
-                    --atomic
-                    --timeout 10m
-                    --create-namespace
-                    --values app/helm/order-service/values-dev.yaml
-                    --set-string global.imageRegistry=$(acrName).azurecr.io
-                    --set-string global.imageTag=$(ImageTag)
-                    --set-string config.kafkaBroker=$(kafkaBroker)
-                    --set secrets.create=false
-                    --set-string secrets.existingSecret=$(runtimeSecretName)
+                  azureSubscription: $(azureServiceConnection)
+                  scriptType: bash
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    set -eu
+                    CHART_PKG=$(helm package "$(Build.SourcesDirectory)/app/helm/order-service" -d /tmp/ | awk '{print $NF}')
+                    echo "📦 Chart: $CHART_PKG"
+                    az aks command invoke \
+                      --resource-group "$AZURE_RESOURCE_GROUP" \
+                      --name "$AKS_CLUSTER_NAME" \
+                      --command "helm upgrade --install $RELEASE_NAME ./$(basename "$CHART_PKG") --namespace $KUBERNETES_NAMESPACE --create-namespace --atomic --timeout 10m --values values-dev.yaml --set-string global.imageRegistry=$ACR_NAME.azurecr.io --set-string global.imageTag=$IMAGE_TAG --set-string config.kafkaBroker=$KAFKA_BROKER --set secrets.create=false --set-string secrets.existingSecret=$RUNTIME_SECRET_NAME" \
+                      --file "$CHART_PKG" \
+                      --file "$(Build.SourcesDirectory)/app/helm/order-service/values-dev.yaml"
+                    echo "✅ Helm deployment complete"
+                env:
+                  AZURE_RESOURCE_GROUP: $(azureResourceGroup)
+                  AKS_CLUSTER_NAME: $(aksClusterName)
+                  KUBERNETES_NAMESPACE: $(kubernetesNamespace)
+                  RELEASE_NAME: $(releaseName)
+                  ACR_NAME: $(acrName)
+                  IMAGE_TAG: $(ImageTag)
+                  KAFKA_BROKER: $(kafkaBroker)
+                  RUNTIME_SECRET_NAME: $(runtimeSecretName)
 
               - task: AzureCLI@2
                 displayName: Verify Deployment Rollout
@@ -535,10 +528,11 @@ stages:
                   scriptLocation: inlineScript
                   inlineScript: |
                     set -eu
-                    az aks get-credentials \
-                      --resource-group "$(azureResourceGroup)" \
-                      --name "$(aksClusterName)" \
-                      --overwrite-existing
-                    kubelogin convert-kubeconfig -l azurecli
-                    kubectl rollout status deployment -n "$(kubernetesNamespace)" --timeout=5m
-                    echo "✅ Deployment successful!"
+                    az aks command invoke \
+                      --resource-group "$AZURE_RESOURCE_GROUP" \
+                      --name "$AKS_CLUSTER_NAME" \
+                      --command "kubectl rollout status deployment -n $KUBERNETES_NAMESPACE --timeout=5m && echo '✅ Deployment successful!'"
+                env:
+                  AZURE_RESOURCE_GROUP: $(azureResourceGroup)
+                  AKS_CLUSTER_NAME: $(aksClusterName)
+                  KUBERNETES_NAMESPACE: $(kubernetesNamespace)
