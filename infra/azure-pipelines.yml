@@ -226,12 +226,13 @@ stages:
                     scriptLocation: inlineScript
                     inlineScript: |
                       set -euo pipefail
-                      chmod +x infra/scripts/seed-keyvault-secrets.sh
+                      SCRIPT="$(Build.SourcesDirectory)/infra/scripts/seed-keyvault-secrets.sh"
+                      chmod +x "$SCRIPT"
                       NAMESPACE=event-driven
                       KEYVAULT_NAME=$(keyVaultNameDev) \
                       RABBITMQ_URL="amqp://rabbitmq.${NAMESPACE}.svc.cluster.local:5672/" \
                       REDIS_URL="redis://redis-master.${NAMESPACE}.svc.cluster.local:6379" \
-                      bash infra/scripts/seed-keyvault-secrets.sh
+                      bash "$SCRIPT"
 
   # =========================================
   # PROD APPROVAL GATE
