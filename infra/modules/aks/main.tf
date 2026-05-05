@@ -27,7 +27,6 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   default_node_pool {
     name                = "system"
-    node_count          = var.environment == "prod" ? 3 : 1
     vm_size             = var.environment == "prod" ? "Standard_D4s_v3" : "Standard_DS2_v2"
     vnet_subnet_id      = var.subnet_id
     max_pods            = 110
