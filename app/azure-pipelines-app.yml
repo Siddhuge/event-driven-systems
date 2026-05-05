@@ -471,8 +471,8 @@ stages:
                   inlineScript: |
                     set -eu
                     aks_invoke() {
-                      local output exit_code
-                      output=$(az aks command invoke "$@" 2>&1); exit_code=$?
+                      local output exit_code=0
+                      output=$(az aks command invoke "$@" 2>&1) || exit_code=$?
                       echo "$output"
                       if [ $exit_code -ne 0 ] && echo "$output" | grep -qF "invalid status 'OK'"; then
                         echo "⚠️  Known Azure CLI LRO bug (HTTP 200 misread) — operation succeeded"
@@ -512,8 +512,8 @@ stages:
                   inlineScript: |
                     set -eu
                     aks_invoke() {
-                      local output exit_code
-                      output=$(az aks command invoke "$@" 2>&1); exit_code=$?
+                      local output exit_code=0
+                      output=$(az aks command invoke "$@" 2>&1) || exit_code=$?
                       echo "$output"
                       if [ $exit_code -ne 0 ] && echo "$output" | grep -qF "invalid status 'OK'"; then
                         echo "⚠️  Known Azure CLI LRO bug (HTTP 200 misread) — operation succeeded"
@@ -549,8 +549,8 @@ stages:
                   inlineScript: |
                     set -eu
                     aks_invoke() {
-                      local output exit_code
-                      output=$(az aks command invoke "$@" 2>&1); exit_code=$?
+                      local output exit_code=0
+                      output=$(az aks command invoke "$@" 2>&1) || exit_code=$?
                       echo "$output"
                       if [ $exit_code -ne 0 ] && echo "$output" | grep -qF "invalid status 'OK'"; then
                         echo "⚠️  Known Azure CLI LRO bug (HTTP 200 misread) — operation succeeded"
