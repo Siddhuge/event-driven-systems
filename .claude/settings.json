@@ -18,7 +18,9 @@
       "Bash(git -C /home/sid/event-driven-azure add infra/scripts/seed-keyvault.sh infra/azure-pipelines.yml)",
       "Bash(git -C /home/sid/event-driven-azure commit -m ' *)",
       "Bash(git -C /home/sid/event-driven-azure add app/azure-pipelines-app.yml)",
-      "Bash(grep -n '\\\\$\\(rabbitmq-url\\)\\\\|\\\\$\\(redis-url\\)\\\\|\\\\$\\(jwt-secret\\)\\\\|\\\\$\\(kafkaBroker\\)\\\\|keyVaultSecretsFilter\\\\|group:' /home/sid/event-driven-azure/app/azure-pipelines-app.yml)"
+      "Bash(grep -n '\\\\$\\(rabbitmq-url\\)\\\\|\\\\$\\(redis-url\\)\\\\|\\\\$\\(jwt-secret\\)\\\\|\\\\$\\(kafkaBroker\\)\\\\|keyVaultSecretsFilter\\\\|group:' /home/sid/event-driven-azure/app/azure-pipelines-app.yml)",
+      "WebSearch",
+      "WebFetch(domain:github.com)"
     ]
   }
 }
