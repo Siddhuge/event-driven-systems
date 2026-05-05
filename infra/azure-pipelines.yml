@@ -226,7 +226,7 @@ stages:
                     scriptLocation: inlineScript
                     inlineScript: |
                       set -euo pipefail
-                      SCRIPT="$(Build.SourcesDirectory)/infra/scripts/seed-keyvault-secrets.sh"
+                      SCRIPT="$(Build.SourcesDirectory)/infra/scripts/seed-keyvault.sh"
                       chmod +x "$SCRIPT"
                       NAMESPACE=event-driven
                       KEYVAULT_NAME=$(keyVaultNameDev) \
