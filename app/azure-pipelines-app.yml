@@ -471,10 +471,14 @@ stages:
                   inlineScript: |
                     set -eu
 
+                    az aks install-cli 2>/dev/null || true
+
                     az aks get-credentials \
                       --resource-group "$AZURE_RESOURCE_GROUP" \
                       --name "$AKS_CLUSTER_NAME" \
                       --overwrite-existing
+
+                    kubelogin convert-kubeconfig -l azurecli
 
                     kubectl create namespace "$KUBERNETES_NAMESPACE" \
                       --dry-run=client \
@@ -523,9 +527,18 @@ stages:
                     --set secrets.create=false
                     --set-string secrets.existingSecret=$(runtimeSecretName)
 
-              - script: |
-                  kubectl rollout status deployment -n "$(kubernetesNamespace)" --timeout=5m
-                  echo "✅ Deployment successful!"
+              - task: AzureCLI@2
                 displayName: Verify Deployment Rollout
-                env:
-                  KUBECONFIG: $(KUBECONFIG)
+                inputs:
+                  azureSubscription: $(azureServiceConnection)
+                  scriptType: bash
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    set -eu
+                    az aks get-credentials \
+                      --resource-group "$(azureResourceGroup)" \
+                      --name "$(aksClusterName)" \
+                      --overwrite-existing
+                    kubelogin convert-kubeconfig -l azurecli
+                    kubectl rollout status deployment -n "$(kubernetesNamespace)" --timeout=5m
+                    echo "✅ Deployment successful!"
