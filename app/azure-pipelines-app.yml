@@ -470,6 +470,16 @@ stages:
                   scriptLocation: inlineScript
                   inlineScript: |
                     set -eu
+                    aks_invoke() {
+                      local output exit_code
+                      output=$(az aks command invoke "$@" 2>&1); exit_code=$?
+                      echo "$output"
+                      if [ $exit_code -ne 0 ] && echo "$output" | grep -qF "invalid status 'OK'"; then
+                        echo "⚠️  Known Azure CLI LRO bug (HTTP 200 misread) — operation succeeded"
+                        return 0
+                      fi
+                      return $exit_code
+                    }
                     {
                       printf 'apiVersion: v1\nkind: Namespace\nmetadata:\n  name: %s\n' "$KUBERNETES_NAMESPACE"
                       printf -- '---\napiVersion: v1\nkind: Secret\nmetadata:\n  name: %s\n  namespace: %s\n' "$RUNTIME_SECRET_NAME" "$KUBERNETES_NAMESPACE"
@@ -478,7 +488,7 @@ stages:
                       printf '  REDIS_URL: "%s"\n' "$REDIS_URL"
                       printf '  JWT_SECRET: "%s"\n' "$JWT_SECRET"
                     } > /tmp/runtime-secret.yaml
-                    az aks command invoke \
+                    aks_invoke \
                       --resource-group "$AZURE_RESOURCE_GROUP" \
                       --name "$AKS_CLUSTER_NAME" \
                       --command "kubectl apply -f runtime-secret.yaml" \
@@ -501,9 +511,19 @@ stages:
                   scriptLocation: inlineScript
                   inlineScript: |
                     set -eu
+                    aks_invoke() {
+                      local output exit_code
+                      output=$(az aks command invoke "$@" 2>&1); exit_code=$?
+                      echo "$output"
+                      if [ $exit_code -ne 0 ] && echo "$output" | grep -qF "invalid status 'OK'"; then
+                        echo "⚠️  Known Azure CLI LRO bug (HTTP 200 misread) — operation succeeded"
+                        return 0
+                      fi
+                      return $exit_code
+                    }
                     CHART_PKG=$(helm package "$(Build.SourcesDirectory)/app/helm/order-service" -d /tmp/ | awk '{print $NF}')
                     echo "📦 Chart: $CHART_PKG"
-                    az aks command invoke \
+                    aks_invoke \
                       --resource-group "$AZURE_RESOURCE_GROUP" \
                       --name "$AKS_CLUSTER_NAME" \
                       --command "helm upgrade --install $RELEASE_NAME ./$(basename "$CHART_PKG") --namespace $KUBERNETES_NAMESPACE --create-namespace --atomic --timeout 10m --values values-dev.yaml --set-string global.imageRegistry=$ACR_NAME.azurecr.io --set-string global.imageTag=$IMAGE_TAG --set-string config.kafkaBroker=$KAFKA_BROKER --set secrets.create=false --set-string secrets.existingSecret=$RUNTIME_SECRET_NAME" \
@@ -528,7 +548,17 @@ stages:
                   scriptLocation: inlineScript
                   inlineScript: |
                     set -eu
-                    az aks command invoke \
+                    aks_invoke() {
+                      local output exit_code
+                      output=$(az aks command invoke "$@" 2>&1); exit_code=$?
+                      echo "$output"
+                      if [ $exit_code -ne 0 ] && echo "$output" | grep -qF "invalid status 'OK'"; then
+                        echo "⚠️  Known Azure CLI LRO bug (HTTP 200 misread) — operation succeeded"
+                        return 0
+                      fi
+                      return $exit_code
+                    }
+                    aks_invoke \
                       --resource-group "$AZURE_RESOURCE_GROUP" \
                       --name "$AKS_CLUSTER_NAME" \
                       --command "kubectl rollout status deployment -n $KUBERNETES_NAMESPACE --timeout=5m && echo '✅ Deployment successful!'"
