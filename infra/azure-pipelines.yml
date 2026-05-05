@@ -21,16 +21,20 @@ pr:
       - infra/*
 
 variables:
-  azureServiceConnection: IAC-Conn
-  terraformVersion: 1.5.7
-  # Environment-specific variables
-  jumpboxEnabledDev: "false"
-  jumpboxEnabledProd: "false"
-  keyVaultNameDev: "event-driven-dev-kv"
-  jumpboxSshPublicKeyDev: ""
-  jumpboxAllowedSshCidrDev: ""
-  jumpboxSshPublicKeyProd: ""
-  jumpboxAllowedSshCidrProd: ""
+  - group: infra-jumpbox-dev
+  - name: azureServiceConnection
+    value: IAC-Conn
+  - name: terraformVersion
+    value: 1.5.7
+  - name: keyVaultNameDev
+    value: "event-driven-dev-kv"
+  # PROD jumpbox variables (set via queue-time override or a separate variable group when needed)
+  - name: jumpboxEnabledProd
+    value: "false"
+  - name: jumpboxSshPublicKeyProd
+    value: ""
+  - name: jumpboxAllowedSshCidrProd
+    value: ""
 
 stages:
 
