@@ -7,7 +7,16 @@
       "Bash(git -C /home/sid/event-driven-azure status --short infra/scripts/)",
       "Bash(git -C /home/sid/event-driven-azure status --short)",
       "Bash(git -C /home/sid/event-driven-azure log --oneline -5)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git -C /home/sid/event-driven-azure ls-files infra/scripts/seed-keyvault-secrets.sh)",
+      "Bash(git -C /home/sid/event-driven-azure log --oneline --name-only -5)",
+      "Bash(git -C /home/sid/event-driven-azure status --short infra/)",
+      "Bash(git -C /home/sid/event-driven-azure status -uall infra/)",
+      "Bash(git -C /home/sid/event-driven-azure check-ignore -v infra/scripts/seed-keyvault-secrets.sh)",
+      "Bash(git -C /home/sid/event-driven-azure ls-files --others --directory infra/)",
+      "Bash(git -C /home/sid/event-driven-azure check-ignore -v infra/scripts/seed-keyvault.sh)",
+      "Bash(git -C /home/sid/event-driven-azure add infra/scripts/seed-keyvault.sh infra/azure-pipelines.yml)",
+      "Bash(git -C /home/sid/event-driven-azure commit -m ' *)"
     ]
   }
 }
