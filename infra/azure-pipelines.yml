@@ -218,6 +218,21 @@ stages:
 
                       echo "✅ DEV infrastructure deployed successfully"
 
+                - task: AzureCLI@2
+                  displayName: 🔑 Seed Key Vault Secrets (DEV)
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      chmod +x infra/scripts/seed-keyvault-secrets.sh
+                      NAMESPACE=event-driven
+                      KEYVAULT_NAME=$(keyVaultNameDev) \
+                      RABBITMQ_URL="amqp://rabbitmq.${NAMESPACE}.svc.cluster.local:5672/" \
+                      REDIS_URL="redis://redis-master.${NAMESPACE}.svc.cluster.local:6379" \
+                      bash infra/scripts/seed-keyvault-secrets.sh
+
   # =========================================
   # PROD APPROVAL GATE
   # =========================================

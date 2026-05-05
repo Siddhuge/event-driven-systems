@@ -12,6 +12,12 @@ const startServer = async () => {
 
   const shutdown = async (signal) => {
     logger.info({ signal }, 'Shutdown signal received, starting graceful shutdown');
+
+    setTimeout(() => {
+      logger.error('Forced exit after shutdown timeout');
+      process.exit(1);
+    }, 30000).unref();
+
     try {
       await stop?.();
       logger.info('Graceful shutdown complete');
@@ -21,11 +27,6 @@ const startServer = async () => {
       process.exit(1);
     }
   };
-
-  setTimeout(() => {
-    logger.error('Forced exit after shutdown timeout');
-    process.exit(1);
-  }, 30000).unref();
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));

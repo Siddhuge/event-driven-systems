@@ -4,11 +4,10 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-      ZOOKEEPER_4LW_COMMANDS_WHITELIST: ruok
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
     healthcheck:
-      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181 | grep imok"]
+      test: ["CMD", "bash", "-c", "echo srvr | nc localhost 2181 | grep Mode"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -87,7 +86,11 @@ services:
       PORT: 3000
       CLIENT_ID: order-service
       KAFKA_BROKER: kafka:29092
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: local-dev-secret
     depends_on:
+      redis:
+        condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
     restart: unless-stopped
